@@ -137,3 +137,50 @@ def get_frame_type_breakdown(conn):
 def get_total_file_count(conn):
     row = conn.execute("SELECT COUNT(*) as count FROM files").fetchone()
     return row["count"]
+
+
+def get_all_files(conn):
+    """Return every file record as a list of dicts, in the CSV/API-facing column shape."""
+    plain_columns = [c for c in FILE_COLUMNS if c not in ("ra", "dec")]
+    query = f"""SELECT {", ".join(plain_columns)},
+                       COALESCE(ra, 'Unknown') AS ra, COALESCE(dec, 'Unknown') AS dec
+                FROM files
+                ORDER BY folder, file_name"""
+    rows = conn.execute(query).fetchall()
+    columns = plain_columns + ["ra", "dec"]
+    return [{col: row[col] for col in columns} for row in rows]
+
+
+def get_unique_target_count(conn):
+    row = conn.execute(
+        "SELECT COUNT(DISTINCT target) as count FROM files WHERE target IS NOT NULL AND target != 'Unknown'"
+    ).fetchone()
+    return row["count"]
+
+
+def get_total_exposure(conn):
+    row = conn.execute("SELECT COALESCE(SUM(exposure), 0) as total FROM files").fetchone()
+    return row["total"]
+
+
+def get_filter_breakdown(conn):
+    rows = conn.execute(
+        """SELECT filter, COUNT(*) as count FROM files
+           WHERE filter IS NOT NULL AND filter != 'No Filter'
+           GROUP BY filter ORDER BY count DESC"""
+    ).fetchall()
+    return [(row["filter"], row["count"]) for row in rows]
+
+
+def get_summary_stats(conn):
+    category_counts = dict(get_category_breakdown(conn))
+    return {
+        "total_files": get_total_file_count(conn),
+        "processed": category_counts.get("Processed", 0),
+        "subframes": category_counts.get("Subframe", 0),
+        "unique_targets": get_unique_target_count(conn),
+        "total_exposure_seconds": get_total_exposure(conn),
+        "category_breakdown": get_category_breakdown(conn),
+        "frame_type_breakdown": get_frame_type_breakdown(conn),
+        "filter_breakdown": get_filter_breakdown(conn),
+    }

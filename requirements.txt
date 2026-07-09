@@ -1,5 +1,7 @@
 astropy
 pandas
+fastapi
+uvicorn
 
 # Optional: enables XISF file support
 # xisf
