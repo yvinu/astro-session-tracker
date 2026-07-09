@@ -521,6 +521,8 @@
                                 <th>Group</th>
                                 <th>Files</th>
                                 <th>Labels merged into this group</th>
+                                <th>Integration Time</th>
+                                <th>Mean Midpoint (UTC)</th>
                             </tr>
                         </thead>
                         <tbody id="targetGroupsBody"></tbody>
@@ -627,14 +629,26 @@
 
             document.getElementById('targetGroupsSection').style.display = 'block';
 
+            const formatIntegrationTime = (seconds) => {
+                if (!seconds) return '—';
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.round((seconds % 3600) / 60);
+                return `${hours}h ${minutes}m`;
+            };
+
             const tbody = document.getElementById('targetGroupsBody');
             tbody.innerHTML = groups.map(g => {
                 const multiLabel = g.labels.filter(l => l && l !== 'Unknown').length > 1;
                 const labelText = g.labels.filter(l => l).join(', ') || 'Unknown';
+                const midpointText = g.mean_midpoint
+                    ? g.mean_midpoint.replace('T', ' ').replace('+00:00', '')
+                    : '—';
                 return `<tr>
                     <td>#${g.target_group_id}</td>
                     <td>${g.file_count}</td>
                     <td>${multiLabel ? '<span class="badge badge-processed">merged</span> ' : ''}${labelText}</td>
+                    <td>${formatIntegrationTime(g.integration_seconds)}</td>
+                    <td>${midpointText}</td>
                 </tr>`;
             }).join('');
 

@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from astro_tracker import storage
+from astro_tracker import integration, storage
 from astro_tracker.exporter import records_to_csv
 from astro_tracker.scanner import DEFAULT_DB_PATH
 
@@ -55,8 +55,13 @@ def get_stats():
 def list_target_groups():
     conn = get_conn()
     try:
+        groups = storage.get_target_groups_summary(conn)
+        for group in groups:
+            group_files = storage.get_files_for_target_group(conn, group["target_group_id"])
+            group["integration_seconds"] = integration.total_integration_seconds(group_files)
+            group["mean_midpoint"] = integration.grand_integrated_mean_midpoint(group_files)
         return {
-            "groups": storage.get_target_groups_summary(conn),
+            "groups": groups,
             "ungrouped_file_count": storage.get_ungrouped_file_count(conn),
         }
     finally:
