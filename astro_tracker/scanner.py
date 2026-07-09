@@ -114,6 +114,8 @@ def main():
                          help=f'SQLite database path (default: {DEFAULT_DB_PATH})')
     parser.add_argument('-e', '--error-log', default=DEFAULT_ERROR_LOG,
                          help=f'Error log file name (default: {DEFAULT_ERROR_LOG})')
+    parser.add_argument('--cluster', action='store_true',
+                         help='Recompute RA/DEC target-group clustering after scanning')
     args = parser.parse_args()
 
     if not os.path.isdir(args.directory):
@@ -146,6 +148,16 @@ def main():
     print("Frame type breakdown:")
     for frame_type, count in storage.get_frame_type_breakdown(conn):
         print(f"   {frame_type}: {count}")
+
+    if args.cluster:
+        from astro_tracker import clustering
+        files = storage.get_all_files_for_clustering(conn)
+        group_of = clustering.cluster_files(files)
+        n_groups = storage.save_clustering(conn, group_of)
+        ungrouped = storage.get_ungrouped_file_count(conn)
+        print(f"\nRA/DEC clustering: {n_groups} target group(s) found, {ungrouped} file(s) ungrouped "
+              f"(missing/malformed coordinates).")
+
     conn.close()
 
 

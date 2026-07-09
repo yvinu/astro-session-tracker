@@ -49,6 +49,18 @@ def get_stats():
         conn.close()
 
 
+@app.get("/api/target-groups")
+def list_target_groups():
+    conn = get_conn()
+    try:
+        return {
+            "groups": storage.get_target_groups_summary(conn),
+            "ungrouped_file_count": storage.get_ungrouped_file_count(conn),
+        }
+    finally:
+        conn.close()
+
+
 @app.get("/api/export.csv")
 def export_csv():
     conn = get_conn()
