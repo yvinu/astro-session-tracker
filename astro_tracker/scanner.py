@@ -161,6 +161,15 @@ def main():
             print(f"   Note: {n_orphaned} previous target group(s) no longer match any current "
                   f"cluster and were removed; any sessions/annotations tied to them are now orphaned.")
 
+        from astro_tracker import sessions as sessions_module
+        session_files = storage.get_all_files_for_sessions(conn)
+        session_groups = sessions_module.derive_sessions(session_files)
+        n_sessions, n_stale_sessions = storage.save_sessions(conn, session_groups)
+        print(f"\nSessions: {n_sessions} session(s) derived.")
+        if n_stale_sessions > 0:
+            print(f"   Note: {n_stale_sessions} previous session(s) no longer match any current "
+                  f"grouping and were removed.")
+
     conn.close()
 
 
