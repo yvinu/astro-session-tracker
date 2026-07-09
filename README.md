@@ -109,6 +109,20 @@ Progress: 1232/1232 (100.0%) - M42_light_100.fits
    Bias Frame: 11
 ```
 
+## Live Dashboard (incremental scanner + API server)
+
+The `astro_tracker` package adds an incremental, SQLite-backed alternative to the one-shot CSV workflow above:
+
+```bash
+# Scan into a SQLite database (only new/changed files are re-parsed on repeat runs)
+python3 -m astro_tracker.scanner -d /path/to/images --db astro_inventory.db
+
+# Serve the dashboard + a local read API over that database
+python3 -m astro_tracker.server --db astro_inventory.db
+```
+
+Then open `http://127.0.0.1:8000` — `dashboard.html` now loads live from the local API instead of requiring a manual CSV upload. Re-run the scanner anytime; unchanged files are skipped, so repeat scans on a growing library are fast.
+
 ## Troubleshooting
 
 ### XISF Files Not Processing

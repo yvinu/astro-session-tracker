@@ -431,17 +431,8 @@
             <p class="subtitle">Interactive astronomy image file explorer</p>
         </header>
 
-        <!-- File Upload -->
-        <div class="upload-section" id="uploadSection">
-            <label for="csvFile" class="upload-label">
-                📂 Load CSV Report
-            </label>
-            <input type="file" id="csvFile" accept=".csv">
-            <div class="file-name" id="fileName">No file selected</div>
-        </div>
-
         <!-- Loading State -->
-        <div id="loading" class="loading" style="display: none;">
+        <div id="loading" class="loading">
             <div class="spinner"></div>
             <p>Loading data...</p>
         </div>
@@ -536,63 +527,28 @@
         const rowsPerPage = 50;
         let currentPage = 1;
 
-        // File upload handler
-        document.getElementById('csvFile').addEventListener('change', function (e) {
-            const file = e.target.files[0];
-            if (file) {
-                document.getElementById('fileName').textContent = file.name;
-                document.getElementById('loading').style.display = 'block';
-
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    const csv = event.target.result;
-                    parseCSV(csv);
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
-                    document.getElementById('uploadSection').style.display = 'none';
-                };
-                reader.readAsText(file);
+        // Load data from the local API server
+        async function loadFromApi() {
+            try {
+                const response = await fetch('/api/files');
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+                allData = await response.json();
+            } catch (err) {
+                document.getElementById('loading').innerHTML =
+                    `<p>⚠️ Could not load data from the local server: ${err.message}</p>` +
+                    `<p>Make sure the server is running (python -m astro_tracker.server) and reload this page.</p>`;
+                return;
             }
-        });
-
-        // CSV Parser
-        function parseCSV(csv) {
-            const lines = csv.split('\n').filter(line => line.trim());
-            const headers = lines[0].split(',').map(h => h.trim());
-
-            allData = lines.slice(1).map(line => {
-                const values = parseCSVLine(line);
-                const obj = {};
-                headers.forEach((header, i) => {
-                    obj[header] = values[i] || '';
-                });
-                return obj;
-            });
 
             filteredData = [...allData];
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
             initializeDashboard();
         }
 
-        // Handle CSV lines with quoted values
-        function parseCSVLine(line) {
-            const values = [];
-            let current = '';
-            let inQuotes = false;
-
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
-                    values.push(current.trim());
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-            values.push(current.trim());
-            return values;
-        }
+        window.addEventListener('DOMContentLoaded', loadFromApi);
 
         // Initialize Dashboard
         function initializeDashboard() {

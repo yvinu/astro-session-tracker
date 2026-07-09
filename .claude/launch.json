@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "astro-tracker-server",
+      "runtimeExecutable": "/Users/yvinu/Automation/FITS_Report/.venv/bin/python",
+      "runtimeArgs": ["-m", "astro_tracker.server", "--db", "/tmp/asp_demo/inv.db", "--port", "8123"],
+      "port": 8123
+    }
+  ]
+}
