@@ -544,6 +544,9 @@
                                 <th>Target Group</th>
                                 <th>Labels</th>
                                 <th>Files</th>
+                                <th>Rating (1-5)</th>
+                                <th>Bortle (1-9)</th>
+                                <th>Notes</th>
                             </tr>
                         </thead>
                         <tbody id="sessionsBody"></tbody>
@@ -665,8 +668,50 @@
                     <td>#${s.target_group_id}</td>
                     <td>${labelText}</td>
                     <td>${s.file_count}</td>
+                    <td>
+                        <input type="number" min="1" max="5" style="width: 4rem;"
+                               value="${s.rating ?? ''}" placeholder="-"
+                               onchange="saveSessionAnnotation(${s.session_id}, 'rating', this.value, this)">
+                    </td>
+                    <td>
+                        <input type="number" min="1" max="9" style="width: 4rem;"
+                               value="${s.bortle ?? ''}" placeholder="-"
+                               onchange="saveSessionAnnotation(${s.session_id}, 'bortle', this.value, this)">
+                    </td>
+                    <td>
+                        <input type="text" style="width: 12rem;"
+                               value="${s.notes ? s.notes.replace(/"/g, '&quot;') : ''}" placeholder="notes..."
+                               onchange="saveSessionAnnotation(${s.session_id}, 'notes', this.value, this)">
+                    </td>
                 </tr>`;
             }).join('');
+        }
+
+        // Save a single annotation field (rating/bortle/notes) for a session.
+        async function saveSessionAnnotation(sessionId, field, rawValue, inputEl) {
+            const body = {};
+            if (field === 'notes') {
+                body.notes = rawValue;
+            } else {
+                body[field] = rawValue === '' ? null : parseInt(rawValue, 10);
+            }
+
+            try {
+                const response = await fetch(`/api/sessions/${sessionId}/annotation`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${response.status}`);
+                }
+                inputEl.style.borderColor = 'var(--accent-success)';
+                setTimeout(() => { inputEl.style.borderColor = ''; }, 800);
+            } catch (err) {
+                inputEl.style.borderColor = 'var(--accent-danger)';
+                alert(`Failed to save ${field}: ${err.message}`);
+            }
         }
 
         // Update Statistics Cards

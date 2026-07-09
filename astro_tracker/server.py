@@ -7,9 +7,11 @@ with CORS.
 
 import argparse
 import os
+from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
+from pydantic import BaseModel, Field
 
 from astro_tracker import storage
 from astro_tracker.exporter import records_to_csv
@@ -66,6 +68,28 @@ def list_sessions():
     conn = get_conn()
     try:
         return storage.get_sessions_summary(conn)
+    finally:
+        conn.close()
+
+
+class SessionAnnotationUpdate(BaseModel):
+    rating: Optional[int] = Field(default=None, ge=1, le=5)
+    bortle: Optional[int] = Field(default=None, ge=1, le=9)
+    notes: Optional[str] = None
+
+
+@app.put("/api/sessions/{session_id}/annotation")
+def update_session_annotation(session_id: int, body: SessionAnnotationUpdate):
+    conn = get_conn()
+    try:
+        session_exists = conn.execute(
+            "SELECT 1 FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+        if not session_exists:
+            raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+        return storage.upsert_session_annotation(
+            conn, session_id, rating=body.rating, bortle=body.bortle, notes=body.notes
+        )
     finally:
         conn.close()
 
