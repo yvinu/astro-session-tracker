@@ -507,6 +507,28 @@
                 </div>
             </div>
 
+            <!-- Target Groups (RA/DEC FOV clustering) -->
+            <div class="table-container" id="targetGroupsSection" style="display: none; margin-bottom: 2rem;">
+                <h3 class="chart-title">🎯 Target Groups (by sky position)</h3>
+                <p class="subtitle" style="margin-bottom: 1rem;">
+                    Files clustered by RA/DEC proximity, independent of the OBJECT label — reveals when
+                    differently-named or mislabeled targets are actually the same field of view.
+                </p>
+                <div style="overflow-x: auto;">
+                    <table id="targetGroupsTable">
+                        <thead>
+                            <tr>
+                                <th>Group</th>
+                                <th>Files</th>
+                                <th>Labels merged into this group</th>
+                            </tr>
+                        </thead>
+                        <tbody id="targetGroupsBody"></tbody>
+                    </table>
+                </div>
+                <p class="stat-detail" id="ungroupedNote" style="margin-top: 1rem;"></p>
+            </div>
+
             <!-- Data Table -->
             <div class="table-container">
                 <h3 class="chart-title">Data Explorer</h3>
@@ -560,6 +582,40 @@
             drawCharts();
             updateTable();
             setupEventListeners();
+            loadTargetGroups();
+        }
+
+        // Target Groups (RA/DEC FOV clustering)
+        async function loadTargetGroups() {
+            let payload;
+            try {
+                const response = await fetch('/api/target-groups');
+                if (!response.ok) return;
+                payload = await response.json();
+            } catch (err) {
+                return; // clustering hasn't been run yet, or server doesn't support it -- skip silently
+            }
+
+            const groups = payload.groups || [];
+            if (groups.length === 0) return;
+
+            document.getElementById('targetGroupsSection').style.display = 'block';
+
+            const tbody = document.getElementById('targetGroupsBody');
+            tbody.innerHTML = groups.map(g => {
+                const multiLabel = g.labels.filter(l => l && l !== 'Unknown').length > 1;
+                const labelText = g.labels.filter(l => l).join(', ') || 'Unknown';
+                return `<tr>
+                    <td>#${g.target_group_id}</td>
+                    <td>${g.file_count}</td>
+                    <td>${multiLabel ? '<span class="badge badge-processed">merged</span> ' : ''}${labelText}</td>
+                </tr>`;
+            }).join('');
+
+            const ungrouped = payload.ungrouped_file_count || 0;
+            document.getElementById('ungroupedNote').textContent = ungrouped > 0
+                ? `${ungrouped} file(s) have no usable RA/DEC and are not shown in any group.`
+                : '';
         }
 
         // Update Statistics Cards

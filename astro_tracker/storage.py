@@ -40,6 +40,12 @@ CREATE TABLE IF NOT EXISTS scan_runs (
     skipped_count INTEGER DEFAULT 0,
     failed_count INTEGER DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS target_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
 
 FILE_COLUMNS = (
@@ -61,6 +67,10 @@ def connect(db_path):
 
 def init_schema(conn):
     conn.executescript(SCHEMA_SQL)
+    try:
+        conn.execute("ALTER TABLE files ADD COLUMN target_group_id INTEGER REFERENCES target_groups(id)")
+    except sqlite3.OperationalError:
+        pass  # column already exists on a previously-initialized database
     conn.commit()
 
 
@@ -184,3 +194,65 @@ def get_summary_stats(conn):
         "frame_type_breakdown": get_frame_type_breakdown(conn),
         "filter_breakdown": get_filter_breakdown(conn),
     }
+
+
+def get_all_files_for_clustering(conn):
+    """Return every file's id + raw ra/dec, for feeding into clustering.cluster_files."""
+    rows = conn.execute("SELECT id, ra, dec FROM files").fetchall()
+    return [{"id": row["id"], "ra": row["ra"], "dec": row["dec"]} for row in rows]
+
+
+def save_clustering(conn, group_of):
+    """Persist a fresh clustering result (as returned by clustering.cluster_files).
+
+    Replaces all existing target group assignments -- clustering is
+    recomputed from scratch each run rather than incrementally merged, so
+    group ids are not stable identifiers across runs.
+
+    Returns the number of target groups created.
+    """
+    now = _now()
+    conn.execute("DELETE FROM target_groups")
+    conn.execute("UPDATE files SET target_group_id = NULL")
+
+    local_to_db_id = {}
+    for file_id, local_group in group_of.items():
+        if local_group is None:
+            continue
+        if local_group not in local_to_db_id:
+            cursor = conn.execute(
+                "INSERT INTO target_groups (created_at, updated_at) VALUES (?, ?)", (now, now)
+            )
+            local_to_db_id[local_group] = cursor.lastrowid
+        conn.execute(
+            "UPDATE files SET target_group_id = ? WHERE id = ?",
+            (local_to_db_id[local_group], file_id),
+        )
+
+    conn.commit()
+    return len(local_to_db_id)
+
+
+def get_target_groups_summary(conn):
+    """Return each target group's file count and the distinct OBJECT labels merged into it."""
+    rows = conn.execute(
+        """SELECT target_group_id, COUNT(*) as file_count,
+                  GROUP_CONCAT(DISTINCT target) as labels
+           FROM files
+           WHERE target_group_id IS NOT NULL
+           GROUP BY target_group_id
+           ORDER BY file_count DESC"""
+    ).fetchall()
+    return [
+        {
+            "target_group_id": row["target_group_id"],
+            "file_count": row["file_count"],
+            "labels": sorted(set((row["labels"] or "").split(","))),
+        }
+        for row in rows
+    ]
+
+
+def get_ungrouped_file_count(conn):
+    row = conn.execute("SELECT COUNT(*) as count FROM files WHERE target_group_id IS NULL").fetchone()
+    return row["count"]
