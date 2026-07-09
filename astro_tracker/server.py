@@ -9,9 +9,10 @@ import argparse
 import os
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 
 from astro_tracker import storage
+from astro_tracker.exporter import records_to_csv
 from astro_tracker.scanner import DEFAULT_DB_PATH
 
 DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dashboard.html")
@@ -46,6 +47,20 @@ def get_stats():
         return storage.get_summary_stats(conn)
     finally:
         conn.close()
+
+
+@app.get("/api/export.csv")
+def export_csv():
+    conn = get_conn()
+    try:
+        records = storage.get_all_files(conn)
+    finally:
+        conn.close()
+    return PlainTextResponse(
+        records_to_csv(records),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=astro_inventory_export.csv"},
+    )
 
 
 def main():
