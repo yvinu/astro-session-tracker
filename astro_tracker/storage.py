@@ -46,6 +46,15 @@ CREATE TABLE IF NOT EXISTS target_groups (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_group_id INTEGER NOT NULL REFERENCES target_groups(id),
+    observation_night TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(target_group_id, observation_night)
+);
 """
 
 FILE_COLUMNS = (
@@ -67,10 +76,14 @@ def connect(db_path):
 
 def init_schema(conn):
     conn.executescript(SCHEMA_SQL)
-    try:
-        conn.execute("ALTER TABLE files ADD COLUMN target_group_id INTEGER REFERENCES target_groups(id)")
-    except sqlite3.OperationalError:
-        pass  # column already exists on a previously-initialized database
+    for ddl in (
+        "ALTER TABLE files ADD COLUMN target_group_id INTEGER REFERENCES target_groups(id)",
+        "ALTER TABLE files ADD COLUMN session_id INTEGER REFERENCES sessions(id)",
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass  # column already exists on a previously-initialized database
     conn.commit()
 
 
@@ -301,3 +314,81 @@ def get_target_groups_summary(conn):
 def get_ungrouped_file_count(conn):
     row = conn.execute("SELECT COUNT(*) as count FROM files WHERE target_group_id IS NULL").fetchone()
     return row["count"]
+
+
+def get_all_files_for_sessions(conn):
+    """Return every file's id + target_group_id + date, for feeding into sessions.derive_sessions."""
+    rows = conn.execute("SELECT id, target_group_id, date FROM files").fetchall()
+    return [{"id": row["id"], "target_group_id": row["target_group_id"], "date": row["date"]} for row in rows]
+
+
+def save_sessions(conn, session_groups):
+    """Persist a fresh session derivation (as returned by sessions.derive_sessions).
+
+    Sessions have a real natural key -- (target_group_id, observation_night)
+    -- so they're upserted by that key rather than needing the file-overlap
+    matching target_groups requires: an existing session at the same key
+    keeps its id (and thus its annotations, from a later slice, survive).
+    A session whose key no longer appears in this run's derivation is
+    deleted.
+
+    Returns (session_count, stale_session_count_removed).
+    """
+    now = _now()
+    existing = {
+        (row["target_group_id"], row["observation_night"]): row["id"]
+        for row in conn.execute("SELECT id, target_group_id, observation_night FROM sessions")
+    }
+
+    conn.execute("UPDATE files SET session_id = NULL")
+
+    live_ids = set()
+    for (target_group_id, night), file_ids in session_groups.items():
+        key = (target_group_id, night)
+        if key in existing:
+            session_id = existing[key]
+            conn.execute("UPDATE sessions SET updated_at = ? WHERE id = ?", (now, session_id))
+        else:
+            cursor = conn.execute(
+                """INSERT INTO sessions (target_group_id, observation_night, created_at, updated_at)
+                   VALUES (?, ?, ?, ?)""",
+                (target_group_id, night, now, now),
+            )
+            session_id = cursor.lastrowid
+        live_ids.add(session_id)
+
+        placeholders = ",".join("?" * len(file_ids))
+        conn.execute(
+            f"UPDATE files SET session_id = ? WHERE id IN ({placeholders})",
+            [session_id, *file_ids],
+        )
+
+    stale_ids = set(existing.values()) - live_ids
+    for session_id in stale_ids:
+        conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+
+    conn.commit()
+    return len(live_ids), len(stale_ids)
+
+
+def get_sessions_summary(conn):
+    """Return each session's target group, night, file count, and merged OBJECT labels."""
+    rows = conn.execute(
+        """SELECT s.id as session_id, s.target_group_id, s.observation_night,
+                  COUNT(f.id) as file_count,
+                  GROUP_CONCAT(DISTINCT f.target) as labels
+           FROM sessions s
+           JOIN files f ON f.session_id = s.id
+           GROUP BY s.id
+           ORDER BY s.observation_night DESC, s.target_group_id"""
+    ).fetchall()
+    return [
+        {
+            "session_id": row["session_id"],
+            "target_group_id": row["target_group_id"],
+            "observation_night": row["observation_night"],
+            "file_count": row["file_count"],
+            "labels": sorted(set((row["labels"] or "").split(","))),
+        }
+        for row in rows
+    ]

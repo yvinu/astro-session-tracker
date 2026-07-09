@@ -61,6 +61,15 @@ def list_target_groups():
         conn.close()
 
 
+@app.get("/api/sessions")
+def list_sessions():
+    conn = get_conn()
+    try:
+        return storage.get_sessions_summary(conn)
+    finally:
+        conn.close()
+
+
 @app.get("/api/export.csv")
 def export_csv():
     conn = get_conn()

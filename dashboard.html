@@ -529,6 +529,28 @@
                 <p class="stat-detail" id="ungroupedNote" style="margin-top: 1rem;"></p>
             </div>
 
+            <!-- Sessions (target group + observation night) -->
+            <div class="table-container" id="sessionsSection" style="display: none; margin-bottom: 2rem;">
+                <h3 class="chart-title">🌙 Sessions</h3>
+                <p class="subtitle" style="margin-bottom: 1rem;">
+                    Each night's worth of subs on one target group, derived automatically.
+                </p>
+                <div style="overflow-x: auto;">
+                    <table id="sessionsTable">
+                        <thead>
+                            <tr>
+                                <th>Session</th>
+                                <th>Night</th>
+                                <th>Target Group</th>
+                                <th>Labels</th>
+                                <th>Files</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessionsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Data Table -->
             <div class="table-container">
                 <h3 class="chart-title">Data Explorer</h3>
@@ -583,6 +605,7 @@
             updateTable();
             setupEventListeners();
             loadTargetGroups();
+            loadSessions();
         }
 
         // Target Groups (RA/DEC FOV clustering)
@@ -616,6 +639,34 @@
             document.getElementById('ungroupedNote').textContent = ungrouped > 0
                 ? `${ungrouped} file(s) have no usable RA/DEC and are not shown in any group.`
                 : '';
+        }
+
+        // Sessions (target group + observation night)
+        async function loadSessions() {
+            let sessionList;
+            try {
+                const response = await fetch('/api/sessions');
+                if (!response.ok) return;
+                sessionList = await response.json();
+            } catch (err) {
+                return; // sessions haven't been derived yet -- skip silently
+            }
+
+            if (!sessionList || sessionList.length === 0) return;
+
+            document.getElementById('sessionsSection').style.display = 'block';
+
+            const tbody = document.getElementById('sessionsBody');
+            tbody.innerHTML = sessionList.map(s => {
+                const labelText = s.labels.filter(l => l).join(', ') || 'Unknown';
+                return `<tr>
+                    <td>#${s.session_id}</td>
+                    <td>${s.observation_night}</td>
+                    <td>#${s.target_group_id}</td>
+                    <td>${labelText}</td>
+                    <td>${s.file_count}</td>
+                </tr>`;
+            }).join('');
         }
 
         // Update Statistics Cards
