@@ -205,32 +205,77 @@ def get_all_files_for_clustering(conn):
 def save_clustering(conn, group_of):
     """Persist a fresh clustering result (as returned by clustering.cluster_files).
 
-    Replaces all existing target group assignments -- clustering is
-    recomputed from scratch each run rather than incrementally merged, so
-    group ids are not stable identifiers across runs.
+    Clustering is always recomputed from scratch, but persisted group ids
+    are kept stable across runs wherever possible: each newly computed
+    cluster is matched against existing target_groups by file-membership
+    overlap, and reuses the best-matching group's id rather than getting a
+    fresh one. This matters because sessions and session annotations (from
+    later slices) key off target_group_id -- if ids reshuffled on every
+    re-cluster, annotations would silently orphan every time you scan in
+    new subs for an already-known target.
 
-    Returns the number of target groups created.
+    An existing group that no longer overlaps any new cluster (e.g. a
+    target's clustering genuinely changed shape between runs) is dropped;
+    anything keyed on its id becomes orphaned. That's expected to be rare
+    -- routine re-scans that just add more subs to known targets should
+    preserve every existing group's id.
+
+    Returns (group_count, orphaned_count).
     """
     now = _now()
-    conn.execute("DELETE FROM target_groups")
-    conn.execute("UPDATE files SET target_group_id = NULL")
 
-    local_to_db_id = {}
+    existing_members = {}
+    for row in conn.execute(
+        "SELECT id, target_group_id FROM files WHERE target_group_id IS NOT NULL"
+    ):
+        existing_members.setdefault(row["target_group_id"], set()).add(row["id"])
+
+    new_clusters = {}
     for file_id, local_group in group_of.items():
         if local_group is None:
             continue
-        if local_group not in local_to_db_id:
+        new_clusters.setdefault(local_group, set()).add(file_id)
+
+    # Match each new cluster to the existing group it overlaps most, so ids
+    # (and anything keyed on them) survive routine re-clustering. Each
+    # existing group can be claimed by at most one new cluster.
+    claimed_existing_ids = set()
+    local_to_db_id = {}
+    for local_group, file_ids in new_clusters.items():
+        best_id, best_overlap = None, 0
+        for existing_id, members in existing_members.items():
+            if existing_id in claimed_existing_ids:
+                continue
+            overlap = len(file_ids & members)
+            if overlap > best_overlap:
+                best_id, best_overlap = existing_id, overlap
+        if best_id is not None:
+            local_to_db_id[local_group] = best_id
+            claimed_existing_ids.add(best_id)
+        else:
             cursor = conn.execute(
                 "INSERT INTO target_groups (created_at, updated_at) VALUES (?, ?)", (now, now)
             )
             local_to_db_id[local_group] = cursor.lastrowid
+
+    orphaned_ids = set(existing_members) - claimed_existing_ids
+    for group_id in orphaned_ids:
+        conn.execute("DELETE FROM target_groups WHERE id = ?", (group_id,))
+
+    conn.execute("UPDATE files SET target_group_id = NULL")
+    for local_group, file_ids in new_clusters.items():
+        db_id = local_to_db_id[local_group]
+        placeholders = ",".join("?" * len(file_ids))
         conn.execute(
-            "UPDATE files SET target_group_id = ? WHERE id = ?",
-            (local_to_db_id[local_group], file_id),
+            f"UPDATE files SET target_group_id = ? WHERE id IN ({placeholders})",
+            [db_id, *file_ids],
+        )
+        conn.execute(
+            "UPDATE target_groups SET updated_at = ? WHERE id = ?", (now, db_id)
         )
 
     conn.commit()
-    return len(local_to_db_id)
+    return len(local_to_db_id), len(orphaned_ids)
 
 
 def get_target_groups_summary(conn):

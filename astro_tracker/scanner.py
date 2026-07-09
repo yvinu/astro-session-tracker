@@ -153,10 +153,13 @@ def main():
         from astro_tracker import clustering
         files = storage.get_all_files_for_clustering(conn)
         group_of = clustering.cluster_files(files)
-        n_groups = storage.save_clustering(conn, group_of)
+        n_groups, n_orphaned = storage.save_clustering(conn, group_of)
         ungrouped = storage.get_ungrouped_file_count(conn)
         print(f"\nRA/DEC clustering: {n_groups} target group(s) found, {ungrouped} file(s) ungrouped "
               f"(missing/malformed coordinates).")
+        if n_orphaned > 0:
+            print(f"   Note: {n_orphaned} previous target group(s) no longer match any current "
+                  f"cluster and were removed; any sessions/annotations tied to them are now orphaned.")
 
     conn.close()
 
