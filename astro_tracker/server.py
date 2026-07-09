@@ -99,6 +99,15 @@ def update_session_annotation(session_id: int, body: SessionAnnotationUpdate):
         conn.close()
 
 
+@app.get("/api/whats-new")
+def whats_new():
+    conn = get_conn()
+    try:
+        return storage.get_whats_new_since_last_scan(conn)
+    finally:
+        conn.close()
+
+
 @app.get("/api/export.csv")
 def export_csv():
     conn = get_conn()

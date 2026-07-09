@@ -459,3 +459,57 @@ def upsert_session_annotation(conn, session_id, rating=None, bortle=None, notes=
 
     conn.commit()
     return get_session_annotation(conn, session_id)
+
+
+def get_latest_scan_run(conn):
+    row = conn.execute(
+        """SELECT id, directory, started_at, finished_at,
+                  new_count, updated_count, skipped_count, failed_count
+           FROM scan_runs ORDER BY started_at DESC LIMIT 1"""
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def get_whats_new_since_last_scan(conn):
+    """Targets that received new files during the most recent scan run.
+
+    A file inserted at or after the latest scan run's start time was
+    necessarily added by that run (scans are sequential, never
+    concurrent, for a single-user local tool) -- so this is a lookup
+    against already-stored first_seen_at timestamps, not a re-scan or
+    re-parse of anything.
+
+    A target is "new" if every one of its files was just added (it
+    didn't exist in the library before this scan); otherwise it's
+    "has new subs" if only some of its files are new.
+    """
+    latest_run = get_latest_scan_run(conn)
+    if latest_run is None:
+        return {"scan_run": None, "new_targets": [], "targets_with_new_subs": []}
+
+    boundary = latest_run["started_at"]
+    rows = conn.execute(
+        """SELECT target,
+                  COUNT(*) as total_files,
+                  SUM(CASE WHEN first_seen_at >= ? THEN 1 ELSE 0 END) as new_files
+           FROM files
+           GROUP BY target
+           HAVING new_files > 0
+           ORDER BY new_files DESC""",
+        (boundary,),
+    ).fetchall()
+
+    new_targets = []
+    targets_with_new_subs = []
+    for row in rows:
+        entry = {"target": row["target"], "new_file_count": row["new_files"]}
+        if row["new_files"] == row["total_files"]:
+            new_targets.append(entry)
+        else:
+            targets_with_new_subs.append(entry)
+
+    return {
+        "scan_run": latest_run,
+        "new_targets": new_targets,
+        "targets_with_new_subs": targets_with_new_subs,
+    }
