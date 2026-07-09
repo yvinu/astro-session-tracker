@@ -55,6 +55,15 @@ CREATE TABLE IF NOT EXISTS sessions (
     updated_at TEXT NOT NULL,
     UNIQUE(target_group_id, observation_night)
 );
+
+CREATE TABLE IF NOT EXISTS session_annotations (
+    session_id INTEGER PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+    rating INTEGER,
+    bortle INTEGER,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
 
 FILE_COLUMNS = (
@@ -372,13 +381,15 @@ def save_sessions(conn, session_groups):
 
 
 def get_sessions_summary(conn):
-    """Return each session's target group, night, file count, and merged OBJECT labels."""
+    """Return each session's target group, night, file count, merged OBJECT labels, and annotation."""
     rows = conn.execute(
         """SELECT s.id as session_id, s.target_group_id, s.observation_night,
                   COUNT(f.id) as file_count,
-                  GROUP_CONCAT(DISTINCT f.target) as labels
+                  GROUP_CONCAT(DISTINCT f.target) as labels,
+                  sa.rating as rating, sa.bortle as bortle, sa.notes as notes
            FROM sessions s
            JOIN files f ON f.session_id = s.id
+           LEFT JOIN session_annotations sa ON sa.session_id = s.id
            GROUP BY s.id
            ORDER BY s.observation_night DESC, s.target_group_id"""
     ).fetchall()
@@ -389,6 +400,50 @@ def get_sessions_summary(conn):
             "observation_night": row["observation_night"],
             "file_count": row["file_count"],
             "labels": sorted(set((row["labels"] or "").split(","))),
+            "rating": row["rating"],
+            "bortle": row["bortle"],
+            "notes": row["notes"],
         }
         for row in rows
     ]
+
+
+def get_session_annotation(conn, session_id):
+    row = conn.execute(
+        "SELECT * FROM session_annotations WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def upsert_session_annotation(conn, session_id, rating=None, bortle=None, notes=None):
+    """Create or update a session's manual annotation (rating/bortle/notes).
+
+    Only fields passed as non-None are changed; omitted fields keep their
+    existing stored value. This is a separate table from the auto-derived
+    `sessions` row specifically so that save_sessions's re-derivation
+    (which replaces sessions wholesale by natural key) never touches
+    annotation data -- as long as the session's natural key still matches
+    an existing session, its id is reused (see save_sessions) and this
+    annotation stays attached to it untouched.
+    """
+    now = _now()
+    existing = get_session_annotation(conn, session_id)
+
+    if existing:
+        new_rating = rating if rating is not None else existing["rating"]
+        new_bortle = bortle if bortle is not None else existing["bortle"]
+        new_notes = notes if notes is not None else existing["notes"]
+        conn.execute(
+            """UPDATE session_annotations SET rating = ?, bortle = ?, notes = ?, updated_at = ?
+               WHERE session_id = ?""",
+            (new_rating, new_bortle, new_notes, now, session_id),
+        )
+    else:
+        conn.execute(
+            """INSERT INTO session_annotations (session_id, rating, bortle, notes, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (session_id, rating, bortle, notes, now, now),
+        )
+
+    conn.commit()
+    return get_session_annotation(conn, session_id)
