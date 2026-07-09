@@ -1,0 +1,8 @@
+astropy
+pandas
+
+# Optional: enables XISF file support
+# xisf
+
+# Dev
+pytest
