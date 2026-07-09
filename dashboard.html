@@ -439,6 +439,12 @@
 
         <!-- Main Content (hidden until data loaded) -->
         <div id="mainContent" style="display: none;">
+            <!-- What's New Since Last Scan -->
+            <div class="table-container" id="whatsNewSection" style="display: none; margin-bottom: 2rem; border-left: 4px solid var(--accent-success);">
+                <h3 class="chart-title">🆕 Since Last Scan</h3>
+                <div id="whatsNewContent"></div>
+            </div>
+
             <!-- Stats Cards -->
             <div class="stats-grid" id="statsGrid"></div>
 
@@ -611,6 +617,7 @@
             setupEventListeners();
             loadTargetGroups();
             loadSessions();
+            loadWhatsNew();
         }
 
         // Target Groups (RA/DEC FOV clustering)
@@ -699,6 +706,39 @@
                     </td>
                 </tr>`;
             }).join('');
+        }
+
+        // What's New Since Last Scan
+        async function loadWhatsNew() {
+            let payload;
+            try {
+                const response = await fetch('/api/whats-new');
+                if (!response.ok) return;
+                payload = await response.json();
+            } catch (err) {
+                return;
+            }
+
+            if (!payload.scan_run) return;
+
+            const newTargets = payload.new_targets || [];
+            const updatedTargets = payload.targets_with_new_subs || [];
+            if (newTargets.length === 0 && updatedTargets.length === 0) return;
+
+            document.getElementById('whatsNewSection').style.display = 'block';
+
+            let html = '';
+            if (newTargets.length > 0) {
+                html += `<p style="margin-bottom: 0.5rem;"><strong>New targets:</strong> ` +
+                    newTargets.map(t => `${t.target} <span class="stat-detail">(${t.new_file_count} files)</span>`).join(', ') +
+                    `</p>`;
+            }
+            if (updatedTargets.length > 0) {
+                html += `<p><strong>New subs on existing targets:</strong> ` +
+                    updatedTargets.map(t => `${t.target} <span class="stat-detail">(+${t.new_file_count})</span>`).join(', ') +
+                    `</p>`;
+            }
+            document.getElementById('whatsNewContent').innerHTML = html;
         }
 
         // Save a single annotation field (rating/bortle/notes) for a session.
