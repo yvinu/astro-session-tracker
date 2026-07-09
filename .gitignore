@@ -1,0 +1,16 @@
+# Generated reports / logs
+astro_inventory_report.csv
+fits_analysis_errors.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# OS
+.DS_Store

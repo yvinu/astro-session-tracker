@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FITS Inventory Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --bg-tertiary: #252b3b;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #8b5cf6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --border-color: #374151;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1f2e 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--accent-primary), var(--accent-secondary));
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 12px -2px rgba(59, 130, 246, 0.3);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-detail {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* Filters */
+        .filters {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .filters h3 {
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+        }
+
+        .filter-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-item label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-item select,
+        .filter-item input {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.625rem;
+            color: var(--text-primary);
+            font-size: 0.9375rem;
+            transition: all 0.2s ease;
+        }
+
+        .filter-item select:focus,
+        .filter-item input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .reset-btn {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.625rem 1.25rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: auto;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Charts Section */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        /* Data Table */
+        .table-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .search-box {
+            margin-bottom: 1rem;
+        }
+
+        .search-box input {
+            width: 100%;
+            max-width: 400px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        thead {
+            background: var(--bg-tertiary);
+            position: sticky;
+            top: 0;
+        }
+
+        th {
+            padding: 0.875rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            color: var(--accent-primary);
+        }
+
+        td {
+            padding: 0.875rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-processed {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent-secondary);
+        }
+
+        .badge-subframe {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-primary);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .pagination button {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: var(--accent-primary);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination button.active {
+            background: var(--accent-primary);
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--accent-primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* File Upload */
+        .upload-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            border: 2px dashed var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .upload-section input[type="file"] {
+            display: none;
+        }
+
+        .upload-label {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 0.875rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .upload-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .file-name {
+            margin-top: 1rem;
+            color: var(--text-secondary);
+        }
+
+        /* Tooltips */
+        .tooltip {
+            position: absolute;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        /* Chart styles */
+        .bar {
+            transition: all 0.3s ease;
+        }
+
+        .bar:hover {
+            opacity: 0.8;
+        }
+
+        .axis path,
+        .axis line {
+            stroke: var(--border-color);
+        }
+
+        .axis text {
+            fill: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🌌 FITS Inventory Dashboard</h1>
+            <p class="subtitle">Interactive astronomy image file explorer</p>
+        </header>
+
+        <!-- File Upload -->
+        <div class="upload-section" id="uploadSection">
+            <label for="csvFile" class="upload-label">
+                📂 Load CSV Report
+            </label>
+            <input type="file" id="csvFile" accept=".csv">
+            <div class="file-name" id="fileName">No file selected</div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading data...</p>
+        </div>
+
+        <!-- Main Content (hidden until data loaded) -->
+        <div id="mainContent" style="display: none;">
+            <!-- Stats Cards -->
+            <div class="stats-grid" id="statsGrid"></div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <h3>🔍 Filters</h3>
+                <div class="filter-group">
+                    <div class="filter-item">
+                        <label>File Category</label>
+                        <select id="filterCategory">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Frame Type</label>
+                        <select id="filterFrameType">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Target Object</label>
+                        <select id="filterTarget">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Filter</label>
+                        <select id="filterFilter">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Min Subframes per Target</label>
+                        <input type="number" id="filterMinCount" placeholder="e.g. 100" min="0">
+                    </div>
+                    <div class="filter-item">
+                        <label>Search</label>
+                        <input type="text" id="filterSearch" placeholder="Search filename...">
+                    </div>
+                    <div class="filter-item">
+                        <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3 class="chart-title">Frame Type Distribution</h3>
+                    <svg id="frameTypeChart"></svg>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">File Category Breakdown</h3>
+                    <svg id="categoryChart"></svg>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Top Targets by File Count</h3>
+                    <svg id="targetChart"></svg>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Exposure Time Distribution</h3>
+                    <svg id="exposureChart"></svg>
+                </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="table-container">
+                <h3 class="chart-title">Data Explorer</h3>
+                <div class="search-box">
+                    <input type="text" id="tableSearch" placeholder="Search in table...">
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="dataTable">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let filteredData = [];
+        const rowsPerPage = 50;
+        let currentPage = 1;
+
+        // File upload handler
+        document.getElementById('csvFile').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('loading').style.display = 'block';
+
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const csv = event.target.result;
+                    parseCSV(csv);
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    document.getElementById('uploadSection').style.display = 'none';
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // CSV Parser
+        function parseCSV(csv) {
+            const lines = csv.split('\n').filter(line => line.trim());
+            const headers = lines[0].split(',').map(h => h.trim());
+
+            allData = lines.slice(1).map(line => {
+                const values = parseCSVLine(line);
+                const obj = {};
+                headers.forEach((header, i) => {
+                    obj[header] = values[i] || '';
+                });
+                return obj;
+            });
+
+            filteredData = [...allData];
+            initializeDashboard();
+        }
+
+        // Handle CSV lines with quoted values
+        function parseCSVLine(line) {
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    values.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            values.push(current.trim());
+            return values;
+        }
+
+        // Initialize Dashboard
+        function initializeDashboard() {
+            updateStats();
+            populateFilters();
+            drawCharts();
+            updateTable();
+            setupEventListeners();
+        }
+
+        // Update Statistics Cards
+        function updateStats() {
+            const totalFiles = filteredData.length;
+            const processed = filteredData.filter(d => d.file_category === 'Processed').length;
+            const subframes = filteredData.filter(d => d.file_category === 'Subframe').length;
+
+            const targets = new Set(filteredData.map(d => d.target).filter(t => t && t !== 'Unknown')).size;
+
+            const totalExposure = filteredData.reduce((sum, d) => {
+                const exp = parseFloat(d.exposure);
+                return sum + (isNaN(exp) ? 0 : exp);
+            }, 0);
+
+            // Calculate filter breakdown
+            const filterCounts = d3.rollup(filteredData, v => v.length, d => d.filter);
+            const filterArray = Array.from(filterCounts, ([key, value]) => ({ key, value }))
+                .filter(f => f.key && f.key !== 'No Filter')
+                .sort((a, b) => b.value - a.value);
+
+            const topFilters = filterArray.slice(0, 3);
+            const filterDetail = topFilters.length > 0
+                ? topFilters.map(f => `${f.key}: ${f.value}`).join(', ')
+                : 'No filters';
+
+            const statsHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Total Files</div>
+                    <div class="stat-value">${totalFiles.toLocaleString()}</div>
+                    <div class="stat-detail">Showing ${filteredData.length} of ${allData.length}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Processed Files</div>
+                    <div class="stat-value">${processed.toLocaleString()}</div>
+                    <div class="stat-detail">${((processed / totalFiles) * 100).toFixed(1)}% of total</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Subframes</div>
+                    <div class="stat-value">${subframes.toLocaleString()}</div>
+                    <div class="stat-detail">${((subframes / totalFiles) * 100).toFixed(1)}% of total</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Unique Targets</div>
+                    <div class="stat-value">${targets}</div>
+                    <div class="stat-detail">Distinct objects</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Exposure</div>
+                    <div class="stat-value">${(totalExposure / 3600).toFixed(1)}h</div>
+                    <div class="stat-detail">${totalExposure.toFixed(0)} seconds</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Filter Types</div>
+                    <div class="stat-value">${filterArray.length}</div>
+                    <div class="stat-detail">${filterDetail}</div>
+                </div>
+            `;
+
+            document.getElementById('statsGrid').innerHTML = statsHTML;
+        }
+
+        // Populate Filter Dropdowns
+        function populateFilters(useFilteredData = false) {
+            const dataSource = useFilteredData ? filteredData : allData;
+
+            const categories = [...new Set(dataSource.map(d => d.file_category))].filter(Boolean).sort();
+            const frameTypes = [...new Set(dataSource.map(d => d.frame_type))].filter(Boolean).sort();
+            const targets = [...new Set(dataSource.map(d => d.target))].filter(Boolean).sort();
+            const filters = [...new Set(dataSource.map(d => d.filter))].filter(Boolean).sort();
+
+            populateSelect('filterCategory', categories);
+            populateSelect('filterFrameType', frameTypes);
+            populateSelect('filterTarget', targets);
+            populateSelect('filterFilter', filters);
+        }
+
+        function populateSelect(id, options) {
+            const select = document.getElementById(id);
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">All</option>';
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                select.appendChild(option);
+            });
+            select.value = currentValue;
+        }
+
+        // Draw Charts
+        function drawCharts() {
+            drawBarChart('frameTypeChart', 'frame_type');
+            drawPieChart('categoryChart', 'file_category');
+            drawTopTargets();
+            drawExposureHistogram();
+        }
+
+        // Bar Chart
+        function drawBarChart(svgId, field) {
+            const svg = d3.select(`#${svgId}`);
+            svg.selectAll('*').remove();
+
+            const counts = d3.rollup(filteredData, v => v.length, d => d[field]);
+            const data = Array.from(counts, ([key, value]) => ({ key, value }))
+                .sort((a, b) => b.value - a.value);
+
+            const margin = { top: 40, right: 20, bottom: 60, left: 60 };
+            const width = 500 - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            svg.attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.key))
+                .range([0, width])
+                .padding(0.2);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.value)])
+                .nice()
+                .range([height, 0]);
+
+            const colorScale = d3.scaleOrdinal()
+                .domain(data.map(d => d.key))
+                .range(['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899']);
+
+            g.selectAll('.bar')
+                .data(data)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => x(d.key))
+                .attr('y', height)
+                .attr('width', x.bandwidth())
+                .attr('height', 0)
+                .attr('fill', d => colorScale(d.key))
+                .transition()
+                .duration(800)
+                .attr('y', d => y(d.value))
+                .attr('height', d => height - y(d.value));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x))
+                .selectAll('text')
+                .attr('transform', 'rotate(-45)')
+                .style('text-anchor', 'end');
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(y));
+        }
+
+        // Pie Chart
+        function drawPieChart(svgId, field) {
+            const svg = d3.select(`#${svgId}`);
+            svg.selectAll('*').remove();
+
+            const counts = d3.rollup(filteredData, v => v.length, d => d[field]);
+            const data = Array.from(counts, ([key, value]) => ({ key, value }));
+
+            const width = 500;
+            const height = 300;
+            const radius = Math.min(width, height) / 2 - 40;
+
+            svg.attr('width', width)
+                .attr('height', height);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${width / 2},${height / 2})`);
+
+            const color = d3.scaleOrdinal()
+                .domain(data.map(d => d.key))
+                .range(['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b']);
+
+            const pie = d3.pie()
+                .value(d => d.value)
+                .sort(null);
+
+            const arc = d3.arc()
+                .innerRadius(radius * 0.6)
+                .outerRadius(radius);
+
+            const arcs = g.selectAll('.arc')
+                .data(pie(data))
+                .enter().append('g')
+                .attr('class', 'arc');
+
+            arcs.append('path')
+                .attr('d', arc)
+                .attr('fill', d => color(d.data.key))
+                .attr('opacity', 0)
+                .transition()
+                .duration(800)
+                .attr('opacity', 1);
+
+            arcs.append('text')
+                .attr('transform', d => `translate(${arc.centroid(d)})`)
+                .attr('text-anchor', 'middle')
+                .style('fill', 'white')
+                .style('font-size', '14px')
+                .style('font-weight', '600')
+                .text(d => `${d.data.key}: ${d.data.value}`);
+        }
+
+        // Top Targets Chart
+        function drawTopTargets() {
+            const svg = d3.select('#targetChart');
+            svg.selectAll('*').remove();
+
+            const counts = d3.rollup(
+                filteredData.filter(d => d.target && d.target !== 'Unknown'),
+                v => v.length,
+                d => d.target
+            );
+            const data = Array.from(counts, ([key, value]) => ({ key, value }))
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 10);
+
+            const margin = { top: 20, right: 20, bottom: 60, left: 80 };
+            const width = 500 - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            svg.attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const y = d3.scaleBand()
+                .domain(data.map(d => d.key))
+                .range([0, height])
+                .padding(0.2);
+
+            const x = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.value)])
+                .nice()
+                .range([0, width]);
+
+            g.selectAll('.bar')
+                .data(data)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('y', d => y(d.key))
+                .attr('x', 0)
+                .attr('height', y.bandwidth())
+                .attr('width', 0)
+                .attr('fill', '#3b82f6')
+                .transition()
+                .duration(800)
+                .attr('width', d => x(d.value));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(y));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+        }
+
+        // Exposure Histogram
+        function drawExposureHistogram() {
+            const svg = d3.select('#exposureChart');
+            svg.selectAll('*').remove();
+
+            const exposures = filteredData
+                .map(d => parseFloat(d.exposure))
+                .filter(d => !isNaN(d) && d > 0);
+
+            if (exposures.length === 0) return;
+
+            const margin = { top: 20, right: 20, bottom: 60, left: 60 };
+            const width = 500 - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            svg.attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleLinear()
+                .domain([0, d3.max(exposures)])
+                .range([0, width]);
+
+            const histogram = d3.histogram()
+                .domain(x.domain())
+                .thresholds(20);
+
+            const bins = histogram(exposures);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(bins, d => d.length)])
+                .nice()
+                .range([height, 0]);
+
+            g.selectAll('.bar')
+                .data(bins)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => x(d.x0))
+                .attr('y', height)
+                .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+                .attr('height', 0)
+                .attr('fill', '#8b5cf6')
+                .transition()
+                .duration(800)
+                .attr('y', d => y(d.length))
+                .attr('height', d => height - y(d.length));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(y));
+
+            g.append('text')
+                .attr('x', width / 2)
+                .attr('y', height + 45)
+                .attr('text-anchor', 'middle')
+                .style('fill', '#9ca3af')
+                .style('font-size', '12px')
+                .text('Exposure Time (seconds)');
+        }
+
+        // Update Data Table
+        function updateTable() {
+            if (filteredData.length === 0) return;
+
+            const headers = Object.keys(filteredData[0]);
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+
+            // Create header
+            thead.innerHTML = '<tr>' + headers.map(h =>
+                `<th onclick="sortTable('${h}')">${h}</th>`
+            ).join('') + '</tr>';
+
+            // Paginate data
+            const startIdx = (currentPage - 1) * rowsPerPage;
+            const endIdx = startIdx + rowsPerPage;
+            const pageData = filteredData.slice(startIdx, endIdx);
+
+            // Create rows
+            tbody.innerHTML = pageData.map(row => {
+                return '<tr>' + headers.map(h => {
+                    let value = row[h];
+                    if (h === 'file_category') {
+                        const badgeClass = value === 'Processed' ? 'badge-processed' : 'badge-subframe';
+                        value = `<span class="badge ${badgeClass}">${value}</span>`;
+                    } else if (h === 'exposure') {
+                        value = parseFloat(value).toFixed(2) + 's';
+                    }
+                    return `<td>${value}</td>`;
+                }).join('') + '</tr>';
+            }).join('');
+
+            updatePagination();
+        }
+
+        // Pagination
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            const pagination = document.getElementById('pagination');
+
+            let html = `
+                <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    Previous
+                </button>
+            `;
+
+            for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+                html += `
+                    <button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">
+                        ${i}
+                    </button>
+                `;
+            }
+
+            html += `
+                <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    Next
+                </button>
+            `;
+
+            pagination.innerHTML = html;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                updateTable();
+            }
+        }
+
+        // Sort Table
+        let sortColumn = null;
+        let sortAscending = true;
+
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortAscending = !sortAscending;
+            } else {
+                sortColumn = column;
+                sortAscending = true;
+            }
+
+            filteredData.sort((a, b) => {
+                let aVal = a[column];
+                let bVal = b[column];
+
+                // Try to parse as number
+                const aNum = parseFloat(aVal);
+                const bNum = parseFloat(bVal);
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return sortAscending ? aNum - bNum : bNum - aNum;
+                }
+
+                // String comparison
+                if (aVal < bVal) return sortAscending ? -1 : 1;
+                if (aVal > bVal) return sortAscending ? 1 : -1;
+                return 0;
+            });
+
+            currentPage = 1;
+            updateTable();
+        }
+
+        // Apply Filters
+        function applyFilters() {
+            const category = document.getElementById('filterCategory').value;
+            const frameType = document.getElementById('filterFrameType').value;
+            const target = document.getElementById('filterTarget').value;
+            const filter = document.getElementById('filterFilter').value;
+            const search = document.getElementById('filterSearch').value.toLowerCase();
+            const minCount = parseInt(document.getElementById('filterMinCount').value) || 0;
+
+            // First, calculate subframe counts per target if filter is active
+            let validTargets = new Set();
+            if (minCount > 0) {
+                const targetCounts = d3.rollup(
+                    allData.filter(d => d.file_category === 'Subframe'),
+                    v => v.length,
+                    d => d.target
+                );
+
+                targetCounts.forEach((count, targetName) => {
+                    if (count >= minCount) {
+                        validTargets.add(targetName);
+                    }
+                });
+            }
+
+            filteredData = allData.filter(row => {
+                if (category && row.file_category !== category) return false;
+                if (frameType && row.frame_type !== frameType) return false;
+                if (target && row.target !== target) return false;
+                if (filter && row.filter !== filter) return false;
+                if (search && !row.file_name.toLowerCase().includes(search)) return false;
+
+                // Apply minimum subframe count filter
+                if (minCount > 0 && !validTargets.has(row.target)) return false;
+
+                return true;
+            });
+
+            currentPage = 1;
+            updateStats();
+            populateFilters(true); // Update filter options based on filtered data
+            drawCharts();
+            updateTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('filterCategory').value = '';
+            document.getElementById('filterFrameType').value = '';
+            document.getElementById('filterTarget').value = '';
+            document.getElementById('filterFilter').value = '';
+            document.getElementById('filterSearch').value = '';
+            document.getElementById('filterMinCount').value = '';
+            document.getElementById('tableSearch').value = '';
+            applyFilters();
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            document.getElementById('filterCategory').addEventListener('change', applyFilters);
+            document.getElementById('filterFrameType').addEventListener('change', applyFilters);
+            document.getElementById('filterTarget').addEventListener('change', applyFilters);
+            document.getElementById('filterFilter').addEventListener('change', applyFilters);
+            document.getElementById('filterSearch').addEventListener('input', applyFilters);
+            document.getElementById('filterMinCount').addEventListener('input', applyFilters);
+            document.getElementById('tableSearch').addEventListener('input', function () {
+                const search = this.value.toLowerCase();
+                filteredData = allData.filter(row =>
+                    Object.values(row).some(val =>
+                        String(val).toLowerCase().includes(search)
+                    )
+                );
+                currentPage = 1;
+                updateTable();
+            });
+        }
+    </script>
+</body>
+
+</html>
