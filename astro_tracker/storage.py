@@ -320,6 +320,18 @@ def get_target_groups_summary(conn):
     ]
 
 
+def get_files_for_target_group(conn, target_group_id):
+    """Return frame_type/date/exposure for every file in a target group, for the integration calculator."""
+    rows = conn.execute(
+        "SELECT frame_type, date, exposure FROM files WHERE target_group_id = ?",
+        (target_group_id,),
+    ).fetchall()
+    return [
+        {"frame_type": row["frame_type"], "date": row["date"], "exposure": row["exposure"]}
+        for row in rows
+    ]
+
+
 def get_ungrouped_file_count(conn):
     row = conn.execute("SELECT COUNT(*) as count FROM files WHERE target_group_id IS NULL").fetchone()
     return row["count"]
