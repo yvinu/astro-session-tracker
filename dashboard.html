@@ -1161,13 +1161,21 @@
             const totalPages = Math.ceil(filteredData.length / rowsPerPage);
             const pagination = document.getElementById('pagination');
 
+            const maxButtons = 10;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            startPage = Math.max(1, endPage - maxButtons + 1);
+
             let html = `
+                <button onclick="changePage(1)" ${currentPage === 1 ? 'disabled' : ''}>
+                    First
+                </button>
                 <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
                     Previous
                 </button>
             `;
 
-            for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+            for (let i = startPage; i <= endPage; i++) {
                 html += `
                     <button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">
                         ${i}
@@ -1178,6 +1186,9 @@
             html += `
                 <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
                     Next
+                </button>
+                <button onclick="changePage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    Last
                 </button>
             `;
 
