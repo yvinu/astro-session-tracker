@@ -77,10 +77,31 @@ def cluster_files(files, tolerance_deg=DEFAULT_TOLERANCE_DEG):
     Files with missing/malformed coordinates map to None (ungrouped)
     rather than being merged into any group or raising an error.
 
-    Note: this does a pairwise O(n^2) comparison across all files with
-    usable coordinates. Fine for a personal library's distinct-pointing
-    count; a spatial index would be the next step if that ever becomes
-    a bottleneck.
+    Two optimizations keep this fast at real-library scale (tens of
+    thousands of files), where a naive full pairwise scan becomes an
+    hours-long hang:
+
+    1. A spatial grid sized to the tolerance means each file is only
+       compared against files in its own and the 8 neighboring cells,
+       not the whole library. RA wraps at 0/360 (handled below); this
+       does NOT correct for RA's angular compression near the celestial
+       poles, so a target at very high declination could in rare cases
+       get split into more than one group -- not a concern for typical
+       target declinations.
+    2. Within a cell, files are compared against a small set of
+       "representative" points already seen nearby, not every raw file --
+       a new point only becomes an additional representative if it isn't
+       within `tolerance/4` of an existing one. Real dithering jitter
+       between subs of the same target (arcseconds to a few arcminutes)
+       is far smaller than that, so in practice a popular target's
+       hundreds or thousands of subs collapse to a single representative
+       after the first one, turning an O(k^2) blowup for a heavily-
+       imaged target into O(k). Full transitive chains (a point merging
+       into a group only via an intermediate point, not directly within
+       tolerance of the group's first point) are still resolved
+       correctly, since any point spread far enough to matter (more than
+       tolerance/4 from what's already covered) becomes its own
+       representative too.
     """
     files = list(files)
     coords = {}
@@ -93,12 +114,38 @@ def cluster_files(files, tolerance_deg=DEFAULT_TOLERANCE_DEG):
     index_of = {fid: i for i, fid in enumerate(valid_ids)}
     uf = _UnionFind(len(valid_ids))
 
-    for i in range(len(valid_ids)):
-        ra1, dec1 = coords[valid_ids[i]]
-        for j in range(i + 1, len(valid_ids)):
-            ra2, dec2 = coords[valid_ids[j]]
-            if angular_separation_deg(ra1, dec1, ra2, dec2) <= tolerance_deg:
-                uf.union(i, j)
+    cell_size = tolerance_deg
+    num_ra_cells = max(1, math.ceil(360.0 / cell_size))
+    redundancy_epsilon = tolerance_deg / 4
+
+    def ra_cell(ra):
+        return int(ra // cell_size) % num_ra_cells
+
+    def dec_cell(dec):
+        return int(dec // cell_size)
+
+    # cell -> list of (file_id, ra, dec) representative entries
+    grid = {}
+
+    for fid in valid_ids:
+        ra1, dec1 = coords[fid]
+        i = index_of[fid]
+        base_ra_cell = ra_cell(ra1)
+        base_dec_cell = dec_cell(dec1)
+
+        is_redundant = False
+        for d_ra in (-1, 0, 1):
+            neighbor_ra_cell = (base_ra_cell + d_ra) % num_ra_cells
+            for d_dec in (-1, 0, 1):
+                for other_fid, ra2, dec2 in grid.get((neighbor_ra_cell, base_dec_cell + d_dec), ()):
+                    sep = angular_separation_deg(ra1, dec1, ra2, dec2)
+                    if sep <= tolerance_deg:
+                        uf.union(i, index_of[other_fid])
+                        if sep <= redundancy_epsilon:
+                            is_redundant = True
+
+        if not is_redundant:
+            grid.setdefault((base_ra_cell, base_dec_cell), []).append((fid, ra1, dec1))
 
     root_to_group = {}
     group_of = {}

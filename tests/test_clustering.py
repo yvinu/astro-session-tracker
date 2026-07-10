@@ -1,4 +1,6 @@
 import math
+import random
+import time
 
 import pytest
 
@@ -76,3 +78,46 @@ class TestClusterFiles:
     def test_single_file_gets_its_own_group(self):
         groups = cluster_files([{"id": 1, "ra": 10.0, "dec": 10.0}])
         assert groups[1] == 0
+
+    def test_ra_wraparound_merges_across_0_360_boundary(self):
+        # A target sitting right at RA=0h: one sub logged at 359.9, another
+        # at 0.1 -- 0.2 degrees apart in reality, but naive grid bucketing
+        # (floor(ra)) would put them in cell 359 and cell 0, which aren't
+        # numerically adjacent without explicit wraparound handling.
+        files = [
+            {"id": 1, "ra": 359.9, "dec": 10.0},
+            {"id": 2, "ra": 0.1, "dec": 10.0},
+        ]
+        groups = cluster_files(files, tolerance_deg=1.0)
+        assert groups[1] == groups[2]
+        assert groups[1] is not None
+
+    def test_large_library_with_many_distinct_targets_completes_quickly(self):
+        # Regression test for the O(n^2) full-pairwise scan that made
+        # clustering a real ~46,000-file library hang for hours in
+        # practice. 50 distinct target pointings x 1000 tightly-clustered
+        # subs each, scattered across the whole sky (including near the
+        # RA=0/360 boundary) -- should resolve to exactly 50 groups, fast.
+        random.seed(42)
+        num_targets = 50
+        subs_per_target = 1000
+        centers = [
+            (random.uniform(0, 360), random.uniform(-70, 70))
+            for _ in range(num_targets)
+        ]
+
+        files = []
+        next_id = 1
+        for center_ra, center_dec in centers:
+            for _ in range(subs_per_target):
+                ra = (center_ra + random.uniform(-0.05, 0.05)) % 360
+                dec = center_dec + random.uniform(-0.05, 0.05)
+                files.append({"id": next_id, "ra": ra, "dec": dec})
+                next_id += 1
+
+        start = time.monotonic()
+        groups = cluster_files(files, tolerance_deg=1.0)
+        elapsed = time.monotonic() - start
+
+        assert len(set(groups.values())) == num_targets
+        assert elapsed < 10, f"clustering {len(files)} files took {elapsed:.1f}s, expected well under 10s"
