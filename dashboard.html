@@ -549,6 +549,7 @@
                                 <th>Labels merged into this group</th>
                                 <th>Integration Time</th>
                                 <th>Mean Midpoint (UTC)</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="targetGroupsBody"></tbody>
@@ -676,6 +677,7 @@
                     <td>${multiLabel ? '<span class="badge badge-processed">merged</span> ' : ''}${labelText}</td>
                     <td>${formatIntegrationTime(g.integration_seconds)}</td>
                     <td>${midpointText}</td>
+                    <td><button class="reset-btn" onclick="exportToSiril(${g.target_group_id}, this)">Export to Siril</button></td>
                 </tr>`;
             }).join('');
 
@@ -683,6 +685,50 @@
             document.getElementById('ungroupedNote').textContent = ungrouped > 0
                 ? `${ungrouped} file(s) have no usable RA/DEC and are not shown in any group.`
                 : '';
+        }
+
+        // Export a target group's files into a Siril-shaped working folder (symlinks, no .ssf script).
+        async function exportToSiril(groupId, buttonEl) {
+            const originalLabel = buttonEl.textContent;
+            buttonEl.disabled = true;
+            buttonEl.textContent = 'Choose folder…';
+            try {
+                const pickRes = await fetch('/api/browse-folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ purpose: 'siril_export' }),
+                });
+                const pickData = await pickRes.json();
+                if (!pickData.directory) {
+                    return; // user cancelled the picker
+                }
+
+                buttonEl.textContent = 'Exporting…';
+                const exportRes = await fetch(`/api/target-groups/${groupId}/export-siril`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ destination: pickData.directory }),
+                });
+                const exportData = await exportRes.json();
+                if (!exportRes.ok) {
+                    alert(`Export failed: ${exportData.detail || 'unknown error'}`);
+                    return;
+                }
+
+                const breakdown = exportData.counts
+                    .map(c => `${c.count} ${c.frame_type}/${c.filter}`)
+                    .join(', ');
+                let message = `Linked ${exportData.total_linked} file(s) into:\n${exportData.destination}\n\n${breakdown}`;
+                if (exportData.missing.length > 0) {
+                    message += `\n\n${exportData.missing.length} file(s) were skipped (no longer found on disk).`;
+                }
+                alert(message);
+            } catch (err) {
+                alert(`Export failed: ${err.message}`);
+            } finally {
+                buttonEl.disabled = false;
+                buttonEl.textContent = originalLabel;
+            }
         }
 
         // Sessions (target group + observation night)

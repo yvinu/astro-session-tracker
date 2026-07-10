@@ -539,7 +539,11 @@
             browseBtn.disabled = true;
             browseBtn.textContent = 'Waiting for picker…';
             try {
-                const res = await fetch('/api/scan/browse-folder', { method: 'POST' });
+                const res = await fetch('/api/browse-folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ purpose: 'scan' }),
+                });
                 const data = await res.json();
                 if (data.directory) folderInput.value = data.directory;
             } catch (e) {
