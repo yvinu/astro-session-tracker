@@ -46,6 +46,23 @@
             margin-bottom: 2rem;
             padding-bottom: 1.5rem;
             border-bottom: 2px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
         }
 
         h1 {
@@ -427,8 +444,11 @@
 <body>
     <div class="container">
         <header>
-            <h1>🌌 FITS Inventory Dashboard</h1>
-            <p class="subtitle">Interactive astronomy image file explorer</p>
+            <div>
+                <h1>🌌 FITS Inventory Dashboard</h1>
+                <p class="subtitle">Interactive astronomy image file explorer</p>
+            </div>
+            <a class="nav-link" href="/scan">🔭 Run a Scan &rarr;</a>
         </header>
 
         <!-- Loading State -->
