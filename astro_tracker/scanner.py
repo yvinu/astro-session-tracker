@@ -103,20 +103,63 @@ def _print_progress(counts, file_path, status):
         print(f"Processed: {seen} ({status}) - {os.path.basename(file_path)}", end='\r')
 
 
+def run_clustering(conn):
+    """Run RA/DEC clustering + session derivation against files already in the database.
+
+    Prints the same summary shown by the scanner's --cluster/--cluster-only flags.
+    Shared by both so the output format never drifts between the two paths.
+    """
+    from astro_tracker import clustering
+    files = storage.get_all_files_for_clustering(conn)
+    group_of = clustering.cluster_files(files)
+    n_groups, n_orphaned = storage.save_clustering(conn, group_of)
+    ungrouped = storage.get_ungrouped_file_count(conn)
+    print(f"\nRA/DEC clustering: {n_groups} target group(s) found, {ungrouped} file(s) ungrouped "
+          f"(missing/malformed coordinates).")
+    if n_orphaned > 0:
+        print(f"   Note: {n_orphaned} previous target group(s) no longer match any current "
+              f"cluster and were removed; any sessions/annotations tied to them are now orphaned.")
+
+    from astro_tracker import sessions as sessions_module
+    session_files = storage.get_all_files_for_sessions(conn)
+    session_groups = sessions_module.derive_sessions(session_files)
+    n_sessions, n_stale_sessions = storage.save_sessions(conn, session_groups)
+    print(f"\nSessions: {n_sessions} session(s) derived.")
+    if n_stale_sessions > 0:
+        print(f"   Note: {n_stale_sessions} previous session(s) no longer match any current "
+              f"grouping and were removed.")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Incrementally scan a directory for FITS/XISF files into a SQLite inventory.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument('-d', '--directory', default=DEFAULT_SCAN_DIRECTORY,
-                         help=f'Directory to scan (default: {DEFAULT_SCAN_DIRECTORY})')
+                         help=f'Directory to scan (default: {DEFAULT_SCAN_DIRECTORY}). '
+                              f'Ignored with --cluster-only.')
     parser.add_argument('--db', default=DEFAULT_DB_PATH,
                          help=f'SQLite database path (default: {DEFAULT_DB_PATH})')
     parser.add_argument('-e', '--error-log', default=DEFAULT_ERROR_LOG,
                          help=f'Error log file name (default: {DEFAULT_ERROR_LOG})')
     parser.add_argument('--cluster', action='store_true',
                          help='Recompute RA/DEC target-group clustering after scanning')
+    parser.add_argument('--cluster-only', action='store_true',
+                         help='Skip the directory scan entirely and just re-run RA/DEC clustering + '
+                              'session derivation against files already in the database. Implies '
+                              '--cluster and ignores -d/--directory; useful for large libraries '
+                              'where re-walking the filesystem just to re-cluster is wasted time.')
     args = parser.parse_args()
+
+    if args.cluster_only:
+        print(f"Database: {args.db}")
+        print("Skipping directory scan (--cluster-only)")
+        print("-" * 60)
+        conn = storage.connect(args.db)
+        storage.init_schema(conn)
+        run_clustering(conn)
+        conn.close()
+        return
 
     if not os.path.isdir(args.directory):
         print(f"Error: '{args.directory}' is not a directory.")
@@ -150,25 +193,7 @@ def main():
         print(f"   {frame_type}: {count}")
 
     if args.cluster:
-        from astro_tracker import clustering
-        files = storage.get_all_files_for_clustering(conn)
-        group_of = clustering.cluster_files(files)
-        n_groups, n_orphaned = storage.save_clustering(conn, group_of)
-        ungrouped = storage.get_ungrouped_file_count(conn)
-        print(f"\nRA/DEC clustering: {n_groups} target group(s) found, {ungrouped} file(s) ungrouped "
-              f"(missing/malformed coordinates).")
-        if n_orphaned > 0:
-            print(f"   Note: {n_orphaned} previous target group(s) no longer match any current "
-                  f"cluster and were removed; any sessions/annotations tied to them are now orphaned.")
-
-        from astro_tracker import sessions as sessions_module
-        session_files = storage.get_all_files_for_sessions(conn)
-        session_groups = sessions_module.derive_sessions(session_files)
-        n_sessions, n_stale_sessions = storage.save_sessions(conn, session_groups)
-        print(f"\nSessions: {n_sessions} session(s) derived.")
-        if n_stale_sessions > 0:
-            print(f"   Note: {n_stale_sessions} previous session(s) no longer match any current "
-                  f"grouping and were removed.")
+        run_clustering(conn)
 
     conn.close()
 
