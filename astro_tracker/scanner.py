@@ -33,19 +33,29 @@ def find_image_files(directory):
                 yield os.path.join(root, file)
 
 
-def scan_directory(directory, db_path, error_log_path=None, progress_callback=None):
+def scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None):
     """Incrementally scan `directory` into the SQLite database at `db_path`.
 
-    Returns a dict of counts: new, updated, skipped, failed, total_seen.
+    Returns a dict of counts: new, updated, skipped, failed, total_seen, cancelled.
+
+    If `should_stop` is given, it's checked before each file; when it
+    returns True, the walk stops early. Whatever's already been upserted
+    is committed as usual (partial progress is kept, not rolled back),
+    and counts["cancelled"] is set to True so callers can tell a stopped
+    scan apart from one that ran to completion.
     """
     conn = storage.connect(db_path)
     storage.init_schema(conn)
 
     scan_run_id = storage.start_scan_run(conn, directory)
 
-    counts = {"new": 0, "updated": 0, "skipped": 0, "failed": 0, "total_seen": 0}
+    counts = {"new": 0, "updated": 0, "skipped": 0, "failed": 0, "total_seen": 0, "cancelled": False}
 
     for file_path in find_image_files(directory):
+        if should_stop is not None and should_stop():
+            counts["cancelled"] = True
+            break
+
         counts["total_seen"] += 1
 
         try:
@@ -54,6 +64,8 @@ def scan_directory(directory, db_path, error_log_path=None, progress_callback=No
             counts["failed"] += 1
             if error_log_path:
                 log_error(error_log_path, file_path, str(e))
+            if progress_callback:
+                progress_callback(counts, file_path, "failed", str(e))
             continue
 
         mtime = stat.st_mtime
@@ -65,19 +77,20 @@ def scan_directory(directory, db_path, error_log_path=None, progress_callback=No
                 progress_callback(counts, file_path, "skipped")
             continue
 
+        failure_reason = None
         try:
             meta = get_metadata(file_path)
         except Exception as e:
             meta = None
-            if error_log_path:
-                log_error(error_log_path, file_path, str(e))
+            failure_reason = str(e)
 
         if meta is None:
+            failure_reason = failure_reason or "Failed to extract metadata"
             counts["failed"] += 1
             if error_log_path:
-                log_error(error_log_path, file_path, "Failed to extract metadata")
+                log_error(error_log_path, file_path, failure_reason)
             if progress_callback:
-                progress_callback(counts, file_path, "failed")
+                progress_callback(counts, file_path, "failed", failure_reason)
             continue
 
         status = storage.upsert_file(conn, file_path, mtime, stat.st_size, meta)
@@ -97,7 +110,7 @@ def scan_directory(directory, db_path, error_log_path=None, progress_callback=No
     return counts
 
 
-def _print_progress(counts, file_path, status):
+def _print_progress(counts, file_path, status, detail=None):
     seen = counts["total_seen"]
     if seen % 10 == 0:
         print(f"Processed: {seen} ({status}) - {os.path.basename(file_path)}", end='\r')
@@ -108,6 +121,9 @@ def run_clustering(conn):
 
     Prints the same summary shown by the scanner's --cluster/--cluster-only flags.
     Shared by both so the output format never drifts between the two paths.
+
+    Returns a dict summarizing the result, for callers (e.g. a background
+    scan job) that need structured data rather than just console output.
     """
     from astro_tracker import clustering
     files = storage.get_all_files_for_clustering(conn)
@@ -128,6 +144,14 @@ def run_clustering(conn):
     if n_stale_sessions > 0:
         print(f"   Note: {n_stale_sessions} previous session(s) no longer match any current "
               f"grouping and were removed.")
+
+    return {
+        "target_groups": n_groups,
+        "ungrouped_files": ungrouped,
+        "orphaned_groups": n_orphaned,
+        "sessions": n_sessions,
+        "stale_sessions": n_stale_sessions,
+    }
 
 
 def main():

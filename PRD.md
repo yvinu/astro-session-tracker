@@ -51,6 +51,14 @@ This is a **single-user, local-first, desktop-only** tool — no accounts, no mu
 24. As the sole user, I want to export the current (filtered) dataset to CSV on demand, so that I retain the portability of the original tool for ad hoc analysis in Excel/Sheets.
 25. As the sole user, I want the tool to keep working for FITS files from non-Seestar equipment, so that gear-specific assumptions don't break scans of my other telescope's data.
 26. As the sole user, I want Seestar-specific fields (e.g. distinguishing S50 vs S30, mount mode) surfaced when present in headers, so that I get extra context for Seestar data without it being required for other gear.
+27. As the sole user, I want to pick a target folder and start a scan from a browser page, so that I no longer need to run the Python CLI with hand-typed arguments.
+28. As the sole user, I want to choose between a full scan, a full scan with clustering, or clustering only, so that I can pick the right amount of work for the situation (e.g. skip re-walking the filesystem when I only need to re-cluster).
+29. As the sole user, I want a native folder picker rather than typing a path by hand, so that selecting a directory is fast and error-free.
+30. As the sole user, I want the folder field to remember my recently-used directories, so that rescanning the same one or two library locations doesn't require re-browsing every time.
+31. As the sole user, I want to see live progress while a scan runs (files processed, new/updated/skipped/failed counts), so that I know it's working and roughly how much is left, especially for large libraries.
+32. As the sole user, I want to cancel a scan that's in progress, so that pointing the picker at the wrong (e.g. huge) folder by mistake doesn't force me to wait it out or kill the server process.
+33. As the sole user, I want to see which files failed to parse and why, directly in the browser, so that I don't have to separately open a log file to investigate.
+34. As the sole user, I want the scan page to show me a run that's already in progress if I reload or revisit it, so that I never lose visibility into a long-running scan.
 
 ## Implementation Decisions
 
@@ -71,6 +79,15 @@ This is a **single-user, local-first, desktop-only** tool — no accounts, no mu
 - **CSV Exporter module**: generates a CSV from current database state on demand (via API endpoint or CLI flag), preserving the existing CSV schema/format for continuity with any existing external workflows the user has around the current CSV.
 - **Tech stack continuity**: Python remains the backend language (stdlib `sqlite3`, `astropy`, optional `xisf`, plus a lightweight web framework). Dashboard remains vanilla JS + D3.js — no frontend framework/build step introduced.
 - **Gear model**: no hardcoded device picker (e.g. no explicit S50/S30 selector). All fields are read from whatever headers are present; Seestar-originated files naturally populate Seestar-flavored fields (INSTRUME, etc.) without special-casing, per the gear-agnostic decision made during scoping.
+- **Scan Launch Page module**: a dedicated `/scan` route (separate from the `/` dashboard, linked from its header) that replaces hand-typed CLI invocation with a browser form:
+  - **Mode selector**: Full scan / Full scan + clustering (default) / Clustering only — maps 1:1 to the scanner's existing `--cluster`/`--cluster-only` flags, no new scanner semantics. Selecting "Clustering only" hides the folder field entirely, since that mode never touches the filesystem.
+  - **Folder picker**: a "Browse…" button calls a local API endpoint that shells out to `osascript` to open the native macOS "Choose Folder" dialog and returns the chosen path — macOS-specific by design, since this tool only ever runs on the user's own Mac. A dropdown of the last 5 distinct directories used (derived from `scan_runs.directory`, most-recent first) is offered alongside Browse so regularly-used library locations don't need re-browsing.
+  - **Execution model**: starting a scan launches a background job on the server (not a blocking request) and returns a job id immediately; the page polls a status endpoint every 1-2 seconds to show live progress (files processed, new/updated/skipped/failed) using the scanner's existing progress-callback hook. Only one scan job may run at a time; starting a second while one is active is rejected with a clear message.
+  - **Cancellation**: a "Cancel" button sets a stop flag the background job checks between files (cooperative, not a thread kill) so it stops promptly; files already upserted before cancellation remain committed, matching how an interrupted CLI run already behaves today.
+  - **Completion**: the page stays put and shows the final summary in place (same shape as today's CLI output: counts, category/frame-type breakdown, clustering/session results), plus an expandable list of any failed files (path + reason) sourced from the same data written to the error log — with a "View Dashboard →" link to move on when ready.
+  - **Reload/revisit behavior**: on load, the page checks the status endpoint for an in-progress job and shows its live progress immediately rather than a fresh "start a scan" form, so a job started earlier is never invisible after a refresh or a later visit.
+  - **DB path**: fixed to however the server process was started (`--db` / `ASTRO_TRACKER_DB`); the scan page never exposes a database picker, avoiding any risk of scanning into the wrong `.db` file.
+  - **Job Manager submodule**: the background job state machine (pending → running → done/failed/cancelled, single-job enforcement, cancellation timing, recent-directory tracking) is written as a distinct, testable unit separate from the thin FastAPI route handlers that call it.
 
 ## Testing Decisions
 
@@ -80,6 +97,7 @@ This is a **single-user, local-first, desktop-only** tool — no accounts, no mu
 - **Integration Calculator**: unit tests covering: total integration time is the correct sum of exposure times for a group, the grand integrated mean midpoint matches a hand-computed exposure-weighted average for a known input set, and edge cases (single file, files spanning midnight/date boundary) compute correctly.
 - No existing test suite exists in this repo to follow as prior art; these will be the first automated tests introduced. Standard Python `unittest` or `pytest` conventions apply.
 - Storage/Repository layer and API Server are out of this PRD's explicit test scope (per user decision) — may be covered in a future iteration.
+- **Scan Launch Page**: the Job Manager submodule (state transitions, single-job enforcement, cancellation stopping before the next file, recent-directory tracking) gets unit tests, consistent with the rigor applied to Scanner/FOV Clustering/Integration Calculator. The FastAPI route handlers and the `osascript` native-picker integration are out of test scope, consistent with the existing "API server not covered" decision above — `osascript` in particular isn't practically unit-testable since it drives a real OS dialog.
 
 ## Out of Scope
 

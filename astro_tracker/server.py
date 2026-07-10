@@ -7,17 +7,20 @@ with CORS.
 
 import argparse
 import os
+import subprocess
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from astro_tracker import integration, storage
+from astro_tracker import integration, scan_job, storage
 from astro_tracker.exporter import records_to_csv
 from astro_tracker.scanner import DEFAULT_DB_PATH
 
-DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dashboard.html")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DASHBOARD_PATH = os.path.join(REPO_ROOT, "dashboard.html")
+SCAN_PAGE_PATH = os.path.join(REPO_ROOT, "scan.html")
 
 DB_PATH = os.environ.get("ASTRO_TRACKER_DB", DEFAULT_DB_PATH)
 
@@ -31,6 +34,11 @@ def get_conn():
 @app.get("/")
 def serve_dashboard():
     return FileResponse(DASHBOARD_PATH)
+
+
+@app.get("/scan")
+def serve_scan_page():
+    return FileResponse(SCAN_PAGE_PATH)
 
 
 @app.get("/api/files")
@@ -120,6 +128,79 @@ def export_csv():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=astro_inventory_export.csv"},
     )
+
+
+class ScanStartRequest(BaseModel):
+    mode: str
+    directory: Optional[str] = None
+
+
+@app.post("/api/scan/start")
+def start_scan(body: ScanStartRequest):
+    if body.mode not in scan_job.VALID_MODES:
+        raise HTTPException(status_code=400, detail=f"Invalid mode: {body.mode}")
+
+    if body.mode != scan_job.MODE_CLUSTER_ONLY:
+        if not body.directory:
+            raise HTTPException(status_code=400, detail="directory is required for this mode")
+        if not os.path.isdir(body.directory):
+            raise HTTPException(status_code=400, detail=f"'{body.directory}' is not a directory")
+
+    try:
+        return scan_job.job_manager.start(body.mode, body.directory, DB_PATH)
+    except scan_job.JobAlreadyRunningError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@app.get("/api/scan/status")
+def scan_status():
+    status = scan_job.job_manager.current_status()
+    if status is None:
+        return {"state": "idle"}
+    return status
+
+
+@app.post("/api/scan/cancel")
+def cancel_scan():
+    cancelled = scan_job.job_manager.cancel()
+    if not cancelled:
+        raise HTTPException(status_code=409, detail="No scan is currently running")
+    return {"cancelled": True}
+
+
+@app.get("/api/scan/recent-directories")
+def recent_directories():
+    conn = get_conn()
+    try:
+        return {"directories": storage.get_recent_scan_directories(conn)}
+    finally:
+        conn.close()
+
+
+@app.post("/api/scan/browse-folder")
+def browse_folder():
+    """Open the native macOS folder-choice dialog and return the path picked.
+
+    Single-user, local-only tool that only ever runs on the user's own Mac,
+    so shelling out to osascript for a real OS picker is reasonable here
+    (no equivalent exists via a browser file input, which only exposes
+    relative paths). The AppleScript string is a fixed literal -- no
+    request data is interpolated into it.
+    """
+    script = 'POSIX path of (choose folder with prompt "Select a folder to scan")'
+    try:
+        result = subprocess.run(
+            ["osascript", "-e", script],
+            capture_output=True, text=True, timeout=300,
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Folder picker timed out")
+
+    if result.returncode != 0:
+        # Most commonly the user clicked Cancel in the dialog.
+        return {"directory": None}
+
+    return {"directory": result.stdout.strip()}
 
 
 def main():

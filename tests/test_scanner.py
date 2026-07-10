@@ -92,3 +92,56 @@ def test_corrupt_file_is_logged_and_does_not_crash_scan(tmp_path, make_fits):
     assert os.path.exists(error_log)
     with open(error_log) as f:
         assert "bad.fits" in f.read()
+
+
+def test_failed_file_passes_reason_to_progress_callback(tmp_path):
+    bad_path = tmp_path / "bad.fits"
+    bad_path.write_bytes(b"not a real fits file")
+    db_path = str(tmp_path / "test.db")
+
+    calls = []
+
+    def progress_callback(counts, file_path, status, detail=None):
+        calls.append((file_path, status, detail))
+
+    scan_directory(str(tmp_path), db_path, progress_callback=progress_callback)
+
+    assert len(calls) == 1
+    file_path, status, detail = calls[0]
+    assert status == "failed"
+    assert detail  # some non-empty reason string
+
+
+def test_normal_scan_is_not_marked_cancelled(tmp_path, make_fits):
+    make_fits("a.fits", {"IMAGETYP": "Light Frame"})
+    db_path = str(tmp_path / "test.db")
+
+    counts = scan_directory(str(tmp_path), db_path)
+
+    assert counts["cancelled"] is False
+
+
+def test_should_stop_halts_scan_early_and_marks_cancelled(tmp_path, make_fits):
+    for i in range(5):
+        make_fits(f"f{i}.fits", {"IMAGETYP": "Light Frame"})
+    db_path = str(tmp_path / "test.db")
+
+    processed = []
+
+    def progress_callback(counts, file_path, status, detail=None):
+        processed.append(file_path)
+
+    def should_stop():
+        return len(processed) >= 2
+
+    counts = scan_directory(
+        str(tmp_path), db_path, progress_callback=progress_callback, should_stop=should_stop
+    )
+
+    assert counts["cancelled"] is True
+    assert counts["total_seen"] == 2
+    assert len(processed) == 2
+
+    conn = storage.connect(db_path)
+    assert storage.get_total_file_count(conn) == 2
+    conn.close()

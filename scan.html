@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Launcher</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --bg-tertiary: #252b3b;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #8b5cf6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --border-color: #374151;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1f2e 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+        }
+
+        .nav-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+
+        .panel {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .panel h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .field {
+            margin-bottom: 1.5rem;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .mode-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .mode-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.875rem 1rem;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .mode-option:has(input:checked) {
+            border-color: var(--accent-primary);
+        }
+
+        .mode-option input {
+            margin-top: 0.2rem;
+        }
+
+        .mode-option-text strong {
+            display: block;
+            font-size: 0.9375rem;
+        }
+
+        .mode-option-text span {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .folder-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"], select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.625rem 0.75rem;
+            color: var(--text-primary);
+            font-size: 0.9375rem;
+            font-family: inherit;
+        }
+
+        #folderInput {
+            flex: 1 1 300px;
+            min-width: 0;
+        }
+
+        #recentDirs {
+            flex: 0 1 220px;
+        }
+
+        button {
+            font-family: inherit;
+            border: none;
+            border-radius: 6px;
+            padding: 0.625rem 1.25rem;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            border-color: var(--accent-primary);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-danger);
+            border: 1px solid var(--accent-danger);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .error-message {
+            color: var(--accent-danger);
+            font-size: 0.875rem;
+            margin-top: 0.75rem;
+        }
+
+        .hint {
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            margin-top: 0.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.9rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .badge-running {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-primary);
+        }
+
+        .badge-done {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-success);
+        }
+
+        .badge-cancelled {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-warning);
+        }
+
+        .badge-failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-danger);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .spinner {
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--accent-primary);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .counts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .count-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .count-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .count-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .breakdown-list {
+            list-style: none;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .breakdown-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .summary-section {
+            margin-top: 1.5rem;
+        }
+
+        .summary-section h3 {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        details {
+            margin-top: 1.5rem;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 0.875rem 1rem;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--accent-danger);
+        }
+
+        .failures-list {
+            list-style: none;
+            margin-top: 0.75rem;
+            font-size: 0.8125rem;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .failures-list li {
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .failures-list .path {
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        .failures-list .reason {
+            color: var(--text-secondary);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🔭 Scan Launcher</h1>
+                <p class="subtitle">Run a scan or re-cluster without the CLI</p>
+            </div>
+            <a class="nav-link" href="/">&larr; Dashboard</a>
+        </header>
+
+        <div id="formPanel" class="panel hidden">
+            <h2>Start a scan</h2>
+
+            <div class="field">
+                <label>Mode</label>
+                <div class="mode-options">
+                    <label class="mode-option">
+                        <input type="radio" name="mode" value="full">
+                        <div class="mode-option-text">
+                            <strong>Full scan</strong>
+                            <span>Walk the folder and upsert file metadata. No clustering.</span>
+                        </div>
+                    </label>
+                    <label class="mode-option">
+                        <input type="radio" name="mode" value="full_cluster" checked>
+                        <div class="mode-option-text">
+                            <strong>Full scan + clustering</strong>
+                            <span>Scan the folder, then re-cluster target groups and sessions.</span>
+                        </div>
+                    </label>
+                    <label class="mode-option">
+                        <input type="radio" name="mode" value="cluster_only">
+                        <div class="mode-option-text">
+                            <strong>Clustering only</strong>
+                            <span>Skip the filesystem walk; just re-cluster files already in the database.</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="field" id="folderField">
+                <label for="folderInput">Folder to scan</label>
+                <div class="folder-row">
+                    <input type="text" id="folderInput" placeholder="/path/to/your/AstroPhotos">
+                    <button type="button" class="btn-secondary" id="browseBtn">Browse&hellip;</button>
+                    <select id="recentDirs">
+                        <option value="">Recent&hellip;</option>
+                    </select>
+                </div>
+                <p class="hint">Browse opens the native macOS folder picker on this machine.</p>
+            </div>
+
+            <div class="actions">
+                <button type="button" class="btn-primary" id="startBtn">Start Scan</button>
+            </div>
+            <p class="error-message hidden" id="formError"></p>
+        </div>
+
+        <div id="progressPanel" class="panel hidden">
+            <div class="progress-header">
+                <h2><span class="spinner"></span>Scan in progress</h2>
+                <button type="button" class="btn-danger" id="cancelBtn">Cancel</button>
+            </div>
+            <p class="hint" id="progressMeta"></p>
+            <div class="counts-grid" id="progressCounts"></div>
+            <p class="error-message hidden" id="cancelError"></p>
+        </div>
+
+        <div id="resultsPanel" class="panel hidden">
+            <div class="progress-header">
+                <h2 id="resultsTitle">Scan complete</h2>
+                <span class="badge" id="resultsBadge"></span>
+            </div>
+            <p class="hint" id="resultsMeta"></p>
+            <div class="counts-grid" id="resultsCounts"></div>
+
+            <div id="librarySummarySection" class="summary-section hidden">
+                <h3>Library summary</h3>
+                <ul class="breakdown-list" id="categoryBreakdown"></ul>
+                <ul class="breakdown-list" id="frameTypeBreakdown"></ul>
+            </div>
+
+            <div id="clusterSummarySection" class="summary-section hidden">
+                <h3>Clustering &amp; sessions</h3>
+                <ul class="breakdown-list" id="clusterBreakdown"></ul>
+            </div>
+
+            <details id="failuresDetails" class="hidden">
+                <summary id="failuresSummary"></summary>
+                <ul class="failures-list" id="failuresList"></ul>
+            </details>
+
+            <p class="error-message hidden" id="jobErrorMessage"></p>
+
+            <div class="actions">
+                <a class="btn-primary" href="/" style="text-decoration: none; display: inline-flex; align-items: center;">View Dashboard &rarr;</a>
+                <button type="button" class="btn-secondary" id="newScanBtn">Start another scan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const formPanel = document.getElementById('formPanel');
+        const progressPanel = document.getElementById('progressPanel');
+        const resultsPanel = document.getElementById('resultsPanel');
+        const folderField = document.getElementById('folderField');
+        const folderInput = document.getElementById('folderInput');
+        const recentDirs = document.getElementById('recentDirs');
+        const browseBtn = document.getElementById('browseBtn');
+        const startBtn = document.getElementById('startBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const newScanBtn = document.getElementById('newScanBtn');
+        const formError = document.getElementById('formError');
+        const cancelError = document.getElementById('cancelError');
+
+        let pollTimer = null;
+
+        function showPanel(panel) {
+            [formPanel, progressPanel, resultsPanel].forEach(p => p.classList.add('hidden'));
+            panel.classList.remove('hidden');
+        }
+
+        function selectedMode() {
+            return document.querySelector('input[name="mode"]:checked').value;
+        }
+
+        function updateFolderVisibility() {
+            folderField.classList.toggle('hidden', selectedMode() === 'cluster_only');
+        }
+
+        document.querySelectorAll('input[name="mode"]').forEach(el => {
+            el.addEventListener('change', updateFolderVisibility);
+        });
+
+        async function loadRecentDirectories() {
+            try {
+                const res = await fetch('/api/scan/recent-directories');
+                const data = await res.json();
+                recentDirs.innerHTML = '<option value="">Recent&hellip;</option>';
+                (data.directories || []).forEach(dir => {
+                    const opt = document.createElement('option');
+                    opt.value = dir;
+                    opt.textContent = dir;
+                    recentDirs.appendChild(opt);
+                });
+                if (data.directories && data.directories.length > 0 && !folderInput.value) {
+                    folderInput.value = data.directories[0];
+                    recentDirs.value = data.directories[0];
+                }
+            } catch (e) {
+                // Non-fatal -- form still works without recent-folder memory.
+            }
+        }
+
+        recentDirs.addEventListener('change', () => {
+            if (recentDirs.value) folderInput.value = recentDirs.value;
+        });
+
+        browseBtn.addEventListener('click', async () => {
+            browseBtn.disabled = true;
+            browseBtn.textContent = 'Waiting for picker…';
+            try {
+                const res = await fetch('/api/scan/browse-folder', { method: 'POST' });
+                const data = await res.json();
+                if (data.directory) folderInput.value = data.directory;
+            } catch (e) {
+                formError.textContent = 'Could not open the folder picker.';
+                formError.classList.remove('hidden');
+            } finally {
+                browseBtn.disabled = false;
+                browseBtn.textContent = 'Browse…';
+            }
+        });
+
+        startBtn.addEventListener('click', async () => {
+            formError.classList.add('hidden');
+            const mode = selectedMode();
+            const directory = mode === 'cluster_only' ? null : folderInput.value.trim();
+
+            if (mode !== 'cluster_only' && !directory) {
+                formError.textContent = 'Choose a folder to scan.';
+                formError.classList.remove('hidden');
+                return;
+            }
+
+            startBtn.disabled = true;
+            try {
+                const res = await fetch('/api/scan/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode, directory }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    formError.textContent = data.detail || 'Could not start scan.';
+                    formError.classList.remove('hidden');
+                    return;
+                }
+                renderProgress(data);
+                showPanel(progressPanel);
+                startPolling();
+            } catch (e) {
+                formError.textContent = 'Could not reach the server.';
+                formError.classList.remove('hidden');
+            } finally {
+                startBtn.disabled = false;
+            }
+        });
+
+        cancelBtn.addEventListener('click', async () => {
+            cancelError.classList.add('hidden');
+            cancelBtn.disabled = true;
+            try {
+                const res = await fetch('/api/scan/cancel', { method: 'POST' });
+                if (!res.ok) {
+                    const data = await res.json();
+                    cancelError.textContent = data.detail || 'Could not cancel scan.';
+                    cancelError.classList.remove('hidden');
+                }
+            } finally {
+                cancelBtn.disabled = false;
+            }
+        });
+
+        newScanBtn.addEventListener('click', async () => {
+            showPanel(formPanel);
+            await loadRecentDirectories();
+        });
+
+        const modeLabels = {
+            full: 'Full scan',
+            full_cluster: 'Full scan + clustering',
+            cluster_only: 'Clustering only',
+        };
+
+        function renderProgress(status) {
+            const meta = document.getElementById('progressMeta');
+            meta.textContent = `${modeLabels[status.mode] || status.mode}` +
+                (status.directory ? ` — ${status.directory}` : '');
+
+            const counts = status.counts || {};
+            const grid = document.getElementById('progressCounts');
+            grid.innerHTML = '';
+            [
+                ['total_seen', 'Processed'],
+                ['new', 'New'],
+                ['updated', 'Updated'],
+                ['skipped', 'Skipped'],
+                ['failed', 'Failed'],
+            ].forEach(([key, label]) => {
+                grid.innerHTML += `<div class="count-card"><div class="count-value">${counts[key] ?? 0}</div><div class="count-label">${label}</div></div>`;
+            });
+        }
+
+        function startPolling() {
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(async () => {
+                const res = await fetch('/api/scan/status');
+                const status = await res.json();
+                if (status.state === 'running') {
+                    renderProgress(status);
+                } else {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                    renderResults(status);
+                    showPanel(resultsPanel);
+                }
+            }, 1500);
+        }
+
+        function renderResults(status) {
+            const badge = document.getElementById('resultsBadge');
+            const title = document.getElementById('resultsTitle');
+            const meta = document.getElementById('resultsMeta');
+            badge.className = 'badge badge-' + status.state;
+            badge.textContent = status.state;
+            title.textContent = status.state === 'failed' ? 'Scan failed'
+                : status.state === 'cancelled' ? 'Scan cancelled'
+                : 'Scan complete';
+            meta.textContent = `${modeLabels[status.mode] || status.mode}` +
+                (status.directory ? ` — ${status.directory}` : '');
+
+            const counts = status.counts || {};
+            const grid = document.getElementById('resultsCounts');
+            grid.innerHTML = '';
+            [
+                ['total_seen', 'Processed'],
+                ['new', 'New'],
+                ['updated', 'Updated'],
+                ['skipped', 'Skipped'],
+                ['failed', 'Failed'],
+            ].forEach(([key, label]) => {
+                grid.innerHTML += `<div class="count-card"><div class="count-value">${counts[key] ?? 0}</div><div class="count-label">${label}</div></div>`;
+            });
+
+            const librarySection = document.getElementById('librarySummarySection');
+            if (status.library_summary) {
+                librarySection.classList.remove('hidden');
+                const cat = document.getElementById('categoryBreakdown');
+                const frame = document.getElementById('frameTypeBreakdown');
+                cat.innerHTML = `<li><strong>Total files</strong><span>${status.library_summary.total_files}</span></li>` +
+                    (status.library_summary.category_breakdown || [])
+                        .map(([name, count]) => `<li><span>${name}</span><span>${count}</span></li>`).join('');
+                frame.innerHTML = (status.library_summary.frame_type_breakdown || [])
+                    .map(([name, count]) => `<li><span>${name}</span><span>${count}</span></li>`).join('');
+            } else {
+                librarySection.classList.add('hidden');
+            }
+
+            const clusterSection = document.getElementById('clusterSummarySection');
+            if (status.cluster_summary) {
+                clusterSection.classList.remove('hidden');
+                const cs = status.cluster_summary;
+                document.getElementById('clusterBreakdown').innerHTML = `
+                    <li><span>Target groups</span><span>${cs.target_groups}</span></li>
+                    <li><span>Ungrouped files</span><span>${cs.ungrouped_files}</span></li>
+                    <li><span>Sessions</span><span>${cs.sessions}</span></li>
+                    <li><span>Removed groups (no longer matched)</span><span>${cs.orphaned_groups}</span></li>
+                    <li><span>Removed sessions (no longer matched)</span><span>${cs.stale_sessions}</span></li>
+                `;
+            } else {
+                clusterSection.classList.add('hidden');
+            }
+
+            const failuresDetails = document.getElementById('failuresDetails');
+            const failures = status.failures || [];
+            if (failures.length > 0) {
+                failuresDetails.classList.remove('hidden');
+                document.getElementById('failuresSummary').textContent = `${failures.length} file(s) failed`;
+                document.getElementById('failuresList').innerHTML = failures.map(f =>
+                    `<li><div class="path">${f.path}</div><div class="reason">${f.reason}</div></li>`
+                ).join('');
+            } else {
+                failuresDetails.classList.add('hidden');
+            }
+
+            const jobError = document.getElementById('jobErrorMessage');
+            if (status.error) {
+                jobError.textContent = status.error;
+                jobError.classList.remove('hidden');
+            } else {
+                jobError.classList.add('hidden');
+            }
+        }
+
+        async function init() {
+            await loadRecentDirectories();
+            updateFolderVisibility();
+
+            const res = await fetch('/api/scan/status');
+            const status = await res.json();
+            if (status.state === 'running') {
+                renderProgress(status);
+                showPanel(progressPanel);
+                startPolling();
+            } else if (status.state === 'idle') {
+                showPanel(formPanel);
+            } else {
+                renderResults(status);
+                showPanel(resultsPanel);
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

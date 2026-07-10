@@ -461,6 +461,19 @@ def upsert_session_annotation(conn, session_id, rating=None, bortle=None, notes=
     return get_session_annotation(conn, session_id)
 
 
+def get_recent_scan_directories(conn, limit=5):
+    """Return the most recently used scan directories, most recent first, deduplicated."""
+    rows = conn.execute(
+        """SELECT directory, MAX(started_at) as last_started_at
+           FROM scan_runs
+           GROUP BY directory
+           ORDER BY last_started_at DESC
+           LIMIT ?""",
+        (limit,),
+    ).fetchall()
+    return [row["directory"] for row in rows]
+
+
 def get_latest_scan_run(conn):
     row = conn.execute(
         """SELECT id, directory, started_at, finished_at,
