@@ -332,6 +332,23 @@ def get_files_for_target_group(conn, target_group_id):
     ]
 
 
+def get_files_for_siril_export(conn, target_group_id):
+    """Return path/frame_type/filter/target for every file in a target group.
+
+    Feeds siril_export.build_working_folder -- needs the raw file path
+    (to symlink) and target (to name the working folder), unlike
+    get_files_for_target_group which is scoped to the integration calculator.
+    """
+    rows = conn.execute(
+        "SELECT path, frame_type, filter, target FROM files WHERE target_group_id = ?",
+        (target_group_id,),
+    ).fetchall()
+    return [
+        {"path": row["path"], "frame_type": row["frame_type"], "filter": row["filter"], "target": row["target"]}
+        for row in rows
+    ]
+
+
 def get_ungrouped_file_count(conn):
     row = conn.execute("SELECT COUNT(*) as count FROM files WHERE target_group_id IS NULL").fetchone()
     return row["count"]

@@ -14,7 +14,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from astro_tracker import integration, scan_job, storage
+from astro_tracker import integration, scan_job, siril_export, storage
 from astro_tracker.exporter import records_to_csv
 from astro_tracker.scanner import DEFAULT_DB_PATH
 
@@ -177,17 +177,29 @@ def recent_directories():
         conn.close()
 
 
-@app.post("/api/scan/browse-folder")
-def browse_folder():
+BROWSE_FOLDER_PROMPTS = {
+    "scan": "Select a folder to scan",
+    "siril_export": "Select a destination folder for the Siril working folder",
+}
+
+
+class BrowseFolderRequest(BaseModel):
+    purpose: str = "scan"
+
+
+@app.post("/api/browse-folder")
+def browse_folder(body: BrowseFolderRequest = BrowseFolderRequest()):
     """Open the native macOS folder-choice dialog and return the path picked.
 
     Single-user, local-only tool that only ever runs on the user's own Mac,
     so shelling out to osascript for a real OS picker is reasonable here
     (no equivalent exists via a browser file input, which only exposes
-    relative paths). The AppleScript string is a fixed literal -- no
-    request data is interpolated into it.
+    relative paths). `purpose` only selects among a small fixed set of
+    prompt strings server-side -- request data is never interpolated
+    into the AppleScript command itself.
     """
-    script = 'POSIX path of (choose folder with prompt "Select a folder to scan")'
+    prompt = BROWSE_FOLDER_PROMPTS.get(body.purpose, "Select a folder")
+    script = f'POSIX path of (choose folder with prompt "{prompt}")'
     try:
         result = subprocess.run(
             ["osascript", "-e", script],
@@ -201,6 +213,27 @@ def browse_folder():
         return {"directory": None}
 
     return {"directory": result.stdout.strip()}
+
+
+class SirilExportRequest(BaseModel):
+    destination: str
+
+
+@app.post("/api/target-groups/{group_id}/export-siril")
+def export_target_group_to_siril(group_id: int, body: SirilExportRequest):
+    if not body.destination or not os.path.isdir(body.destination):
+        raise HTTPException(status_code=400, detail=f"'{body.destination}' is not a directory")
+
+    conn = get_conn()
+    try:
+        files = storage.get_files_for_siril_export(conn, group_id)
+    finally:
+        conn.close()
+
+    if not files:
+        raise HTTPException(status_code=404, detail=f"Target group {group_id} has no files")
+
+    return siril_export.build_working_folder(files, body.destination, group_id)
 
 
 def main():
