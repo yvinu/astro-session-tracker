@@ -510,6 +510,12 @@
                         </select>
                     </div>
                     <div class="filter-item">
+                        <label>Location</label>
+                        <select id="filterLocation">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
                         <label>Min Subframes per Target</label>
                         <input type="number" id="filterMinCount" placeholder="e.g. 100" min="0">
                     </div>
@@ -969,11 +975,13 @@
             const frameTypes = [...new Set(dataSource.map(d => d.frame_type))].filter(Boolean).sort();
             const targets = [...new Set(dataSource.map(d => d.target))].filter(Boolean).sort();
             const filters = [...new Set(dataSource.map(d => d.filter))].filter(Boolean).sort();
+            const locations = [...new Set(dataSource.map(d => d.location))].filter(Boolean).sort();
 
             populateSelect('filterCategory', categories);
             populateSelect('filterFrameType', frameTypes);
             populateSelect('filterTarget', targets);
             populateSelect('filterFilter', filters);
+            populateSelect('filterLocation', locations);
         }
 
         function populateSelect(id, options) {
@@ -1372,6 +1380,7 @@
             const frameType = document.getElementById('filterFrameType').value;
             const target = document.getElementById('filterTarget').value;
             const filter = document.getElementById('filterFilter').value;
+            const location = document.getElementById('filterLocation').value;
             const search = document.getElementById('filterSearch').value.toLowerCase();
             const minCount = parseInt(document.getElementById('filterMinCount').value) || 0;
 
@@ -1396,6 +1405,7 @@
                 if (frameType && row.frame_type !== frameType) return false;
                 if (target && row.target !== target) return false;
                 if (filter && row.filter !== filter) return false;
+                if (location && row.location !== location) return false;
                 if (search && !row.file_name.toLowerCase().includes(search)) return false;
 
                 // Apply minimum subframe count filter
@@ -1416,6 +1426,7 @@
             document.getElementById('filterFrameType').value = '';
             document.getElementById('filterTarget').value = '';
             document.getElementById('filterFilter').value = '';
+            document.getElementById('filterLocation').value = '';
             document.getElementById('filterSearch').value = '';
             document.getElementById('filterMinCount').value = '';
             document.getElementById('tableSearch').value = '';
@@ -1454,6 +1465,7 @@
             document.getElementById('filterFrameType').addEventListener('change', applyFilters);
             document.getElementById('filterTarget').addEventListener('change', applyFilters);
             document.getElementById('filterFilter').addEventListener('change', applyFilters);
+            document.getElementById('filterLocation').addEventListener('change', applyFilters);
             document.getElementById('filterSearch').addEventListener('input', applyFilters);
             document.getElementById('filterMinCount').addEventListener('input', applyFilters);
             document.getElementById('tableSearch').addEventListener('input', function () {

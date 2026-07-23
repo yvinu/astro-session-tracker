@@ -7,6 +7,8 @@ import os
 
 from astropy.io import fits
 
+from astro_tracker.location import parse_location
+
 try:
     import xisf
     XISF_AVAILABLE = True
@@ -99,6 +101,7 @@ def get_xisf_metadata(file_path):
         return {
             "file_name": file_name,
             "folder": os.path.dirname(file_path),
+            "location": parse_location(file_path),
             "file_category": file_category,
             "target": meta.get("OBJECT", "Unknown"),
             "date": meta.get("DATE-OBS", "Unknown"),
@@ -129,6 +132,7 @@ def get_fits_metadata(file_path):
             return {
                 "file_name": file_name,
                 "folder": os.path.dirname(file_path),
+                "location": parse_location(file_path),
                 "file_category": file_category,
                 "target": header.get("OBJECT", "Unknown"),
                 "date": header.get("DATE-OBS", "Unknown"),

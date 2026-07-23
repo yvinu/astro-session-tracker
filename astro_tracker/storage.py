@@ -7,6 +7,8 @@ exports are generated views over this store, not the other way around.
 import sqlite3
 from datetime import datetime, timezone
 
+from astro_tracker.location import parse_location
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS files (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,7 +69,7 @@ CREATE TABLE IF NOT EXISTS session_annotations (
 """
 
 FILE_COLUMNS = (
-    "file_name", "folder", "file_category", "target", "date", "frame_type",
+    "file_name", "folder", "location", "file_category", "target", "date", "frame_type",
     "exposure", "gain", "temp", "filter", "instrument", "ra", "dec",
 )
 
@@ -88,11 +90,31 @@ def init_schema(conn):
     for ddl in (
         "ALTER TABLE files ADD COLUMN target_group_id INTEGER REFERENCES target_groups(id)",
         "ALTER TABLE files ADD COLUMN session_id INTEGER REFERENCES sessions(id)",
+        "ALTER TABLE files ADD COLUMN location TEXT",
     ):
         try:
             conn.execute(ddl)
         except sqlite3.OperationalError:
             pass  # column already exists on a previously-initialized database
+    conn.commit()
+    _backfill_locations(conn)
+
+
+def _backfill_locations(conn):
+    """Fill in `location` for any row where it's still NULL, computed from the already-stored `path`.
+
+    Unlike header-derived fields (resolution, binning, optical_train), this
+    needs no file I/O, so it runs automatically on every init_schema call
+    rather than requiring a `--force` rescan -- a no-op once every row has
+    been backfilled.
+    """
+    rows = conn.execute("SELECT id, path FROM files WHERE location IS NULL").fetchall()
+    if not rows:
+        return
+    conn.executemany(
+        "UPDATE files SET location = ? WHERE id = ?",
+        [(parse_location(row["path"]), row["id"]) for row in rows],
+    )
     conn.commit()
 
 

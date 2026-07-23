@@ -1,3 +1,4 @@
+from astro_tracker.location import parse_location
 from astro_tracker.metadata import get_fits_metadata, normalize_frame_type
 
 
@@ -87,3 +88,8 @@ class TestGetFitsMetadata:
         bad_path = tmp_path / "corrupt.fits"
         bad_path.write_bytes(b"not a real fits file")
         assert get_fits_metadata(str(bad_path)) is None
+
+    def test_location_matches_path_parsing(self, make_fits):
+        path = make_fits("light_001.fits", {"OBJECT": "M31"})
+        meta = get_fits_metadata(path)
+        assert meta["location"] == parse_location(path)
