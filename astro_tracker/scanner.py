@@ -136,7 +136,7 @@ def _print_progress(counts, file_path, status, detail=None):
 
 
 def run_clustering(conn):
-    """Run RA/DEC clustering + session derivation against files already in the database.
+    """Run RA/DEC clustering + session derivation + duplicate detection against files already in the database.
 
     Prints the same summary shown by the scanner's --cluster/--cluster-only flags.
     Shared by both so the output format never drifts between the two paths.
@@ -164,12 +164,19 @@ def run_clustering(conn):
         print(f"   Note: {n_stale_sessions} previous session(s) no longer match any current "
               f"grouping and were removed.")
 
+    from astro_tracker import duplicates as duplicates_module
+    duplicate_files = storage.get_all_files_for_duplicates(conn)
+    duplicate_group_of = duplicates_module.find_duplicate_groups(duplicate_files)
+    n_duplicate_groups = storage.save_duplicate_groups(conn, duplicate_group_of)
+    print(f"\nDuplicates: {n_duplicate_groups} duplicate group(s) found.")
+
     return {
         "target_groups": n_groups,
         "ungrouped_files": ungrouped,
         "orphaned_groups": n_orphaned,
         "sessions": n_sessions,
         "stale_sessions": n_stale_sessions,
+        "duplicate_groups": n_duplicate_groups,
     }
 
 

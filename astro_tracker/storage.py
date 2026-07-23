@@ -66,6 +66,12 @@ CREATE TABLE IF NOT EXISTS session_annotations (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS duplicate_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
 
 FILE_COLUMNS = (
@@ -95,6 +101,7 @@ def init_schema(conn):
         "ALTER TABLE files ADD COLUMN resolution TEXT",
         "ALTER TABLE files ADD COLUMN binning TEXT",
         "ALTER TABLE files ADD COLUMN optical_train TEXT",
+        "ALTER TABLE files ADD COLUMN duplicate_group_id INTEGER REFERENCES duplicate_groups(id)",
     ):
         try:
             conn.execute(ddl)
@@ -269,10 +276,13 @@ def save_clustering(conn, group_of):
     new subs for an already-known target.
 
     An existing group that no longer overlaps any new cluster (e.g. a
-    target's clustering genuinely changed shape between runs) is dropped;
-    anything keyed on its id becomes orphaned. That's expected to be rare
-    -- routine re-scans that just add more subs to known targets should
-    preserve every existing group's id.
+    target's clustering genuinely changed shape between runs, such as a
+    second scan location shifting how files cluster) is dropped, and its
+    sessions (and their annotations, via existing cascade) are deleted
+    with it -- target_groups can't just be deleted out from under a
+    NOT NULL sessions.target_group_id foreign key. That's expected to be
+    rare -- routine re-scans that just add more subs to known targets
+    should preserve every existing group's id.
 
     Returns (group_count, orphaned_count).
     """
@@ -313,10 +323,20 @@ def save_clustering(conn, group_of):
             local_to_db_id[local_group] = cursor.lastrowid
 
     orphaned_ids = set(existing_members) - claimed_existing_ids
+
+    # Clear every file's references to both target_group_id and session_id
+    # before deleting orphaned groups/sessions -- files.target_group_id,
+    # files.session_id, and sessions.target_group_id are all foreign keys
+    # with no cascade, so a still-referenced row can't be deleted. Nulling
+    # session_id here (normally save_sessions's job, which hasn't run yet
+    # at this point in run_clustering) is safe: save_sessions
+    # unconditionally re-derives and reassigns it for every file anyway.
+    conn.execute("UPDATE files SET target_group_id = NULL")
+    conn.execute("UPDATE files SET session_id = NULL")
     for group_id in orphaned_ids:
+        conn.execute("DELETE FROM sessions WHERE target_group_id = ?", (group_id,))
         conn.execute("DELETE FROM target_groups WHERE id = ?", (group_id,))
 
-    conn.execute("UPDATE files SET target_group_id = NULL")
     for local_group, file_ids in new_clusters.items():
         db_id = local_to_db_id[local_group]
         placeholders = ",".join("?" * len(file_ids))
@@ -330,6 +350,52 @@ def save_clustering(conn, group_of):
 
     conn.commit()
     return len(local_to_db_id), len(orphaned_ids)
+
+
+def get_all_files_for_duplicates(conn):
+    """Return every file's id + fingerprint fields, for feeding into duplicates.find_duplicate_groups."""
+    rows = conn.execute(
+        "SELECT id, size, date, exposure, target, instrument FROM files"
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def save_duplicate_groups(conn, group_of):
+    """Persist a fresh duplicate-group computation (as returned by duplicates.find_duplicate_groups).
+
+    Unlike target_groups (save_clustering), duplicate groups have no
+    id-stability-across-reruns logic -- nothing else currently keys off
+    duplicate_group_id the way sessions/annotations key off
+    target_group_id, so a full delete-and-recompute on every run is
+    sufficient; do not port save_clustering's overlap-matching complexity
+    here unless a future feature actually needs stable ids.
+
+    Returns the number of duplicate groups found.
+    """
+    now = _now()
+
+    ids_by_local_group = {}
+    for file_id, local_group in group_of.items():
+        if local_group is None:
+            continue
+        ids_by_local_group.setdefault(local_group, []).append(file_id)
+
+    conn.execute("UPDATE files SET duplicate_group_id = NULL")
+    conn.execute("DELETE FROM duplicate_groups")
+
+    for file_ids in ids_by_local_group.values():
+        cursor = conn.execute(
+            "INSERT INTO duplicate_groups (created_at, updated_at) VALUES (?, ?)", (now, now)
+        )
+        db_id = cursor.lastrowid
+        placeholders = ",".join("?" * len(file_ids))
+        conn.execute(
+            f"UPDATE files SET duplicate_group_id = ? WHERE id IN ({placeholders})",
+            [db_id, *file_ids],
+        )
+
+    conn.commit()
+    return len(ids_by_local_group)
 
 
 def get_target_groups_summary(conn):
