@@ -11,9 +11,14 @@ DEFAULT_OUTPUT_FILE = "astro_inventory_report.csv"
 
 
 def records_to_csv(records):
-    """Serialize a list of file-record dicts (as returned by storage.get_all_files) to a CSV string."""
+    """Serialize a list of file-record dicts (as returned by storage.get_all_files) to a CSV string.
+
+    extrasaction='ignore' because get_all_files includes duplicate_group_id
+    as an extra field beyond FILE_COLUMNS for the dashboard's use -- not
+    part of this CSV's column set.
+    """
     buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=storage.FILE_COLUMNS)
+    writer = csv.DictWriter(buffer, fieldnames=storage.FILE_COLUMNS, extrasaction='ignore')
     writer.writeheader()
     writer.writerows(records)
     return buffer.getvalue()

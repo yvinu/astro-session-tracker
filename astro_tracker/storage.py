@@ -254,14 +254,22 @@ def get_total_file_count(conn, exclude_ids=None):
 
 
 def get_all_files(conn):
-    """Return every file record as a list of dicts, in the CSV/API-facing column shape."""
+    """Return every file record as a list of dicts, in the CSV/API-facing column shape.
+
+    duplicate_group_id is included as an extra field beyond FILE_COLUMNS
+    (not part of the CSV export's column set -- see exporter.records_to_csv)
+    so the dashboard's main table can tag duplicate rows without a
+    separate lookup. Every physical row is still returned here regardless
+    of duplicate status -- deduplication only affects aggregate totals
+    (get_summary_stats), never this raw listing.
+    """
     plain_columns = [c for c in FILE_COLUMNS if c not in ("ra", "dec")]
-    query = f"""SELECT {", ".join(plain_columns)},
+    query = f"""SELECT {", ".join(plain_columns)}, duplicate_group_id,
                        COALESCE(ra, 'Unknown') AS ra, COALESCE(dec, 'Unknown') AS dec
                 FROM files
                 ORDER BY folder, file_name"""
     rows = conn.execute(query).fetchall()
-    columns = plain_columns + ["ra", "dec"]
+    columns = plain_columns + ["duplicate_group_id", "ra", "dec"]
     return [{col: row[col] for col in columns} for row in rows]
 
 
@@ -456,6 +464,42 @@ def save_duplicate_groups(conn, group_of):
 
     conn.commit()
     return len(ids_by_local_group)
+
+
+def get_duplicate_groups_summary(conn):
+    """Return each duplicate group's fingerprint summary and member files (path + location).
+
+    target/date/exposure/instrument are identical across every member of a
+    group by construction (that's the fingerprint -- see duplicates.py), so
+    picking them from any one member row is correct, not arbitrary.
+    """
+    rows = conn.execute(
+        """SELECT duplicate_group_id, path, location, target, date, exposure, instrument
+           FROM files
+           WHERE duplicate_group_id IS NOT NULL
+           ORDER BY duplicate_group_id, location, path"""
+    ).fetchall()
+
+    groups_by_id = {}
+    for row in rows:
+        gid = row["duplicate_group_id"]
+        group = groups_by_id.get(gid)
+        if group is None:
+            group = {
+                "duplicate_group_id": gid,
+                "target": row["target"],
+                "date": row["date"],
+                "exposure": row["exposure"],
+                "instrument": row["instrument"],
+                "files": [],
+            }
+            groups_by_id[gid] = group
+        group["files"].append({"path": row["path"], "location": row["location"]})
+
+    groups = list(groups_by_id.values())
+    for group in groups:
+        group["file_count"] = len(group["files"])
+    return groups
 
 
 def get_target_groups_summary(conn):

@@ -626,6 +626,33 @@
                 </div>
             </div>
 
+            <!-- Duplicates -->
+            <div class="table-container" id="duplicatesSection" style="display: none; margin-bottom: 2rem;">
+                <h3 class="chart-title">🗂️ Duplicates</h3>
+                <p class="subtitle" style="margin-bottom: 1rem;">
+                    Files with an identical capture fingerprint (size, timestamp, exposure, target, camera)
+                    found at more than one Location — the same sub copied across drives.
+                </p>
+                <p class="stat-detail" id="duplicatesSummary" style="margin-bottom: 1rem;"></p>
+                <div style="overflow-x: auto;">
+                    <table id="duplicatesTable">
+                        <thead>
+                            <tr>
+                                <th>Group</th>
+                                <th>Target</th>
+                                <th>Date</th>
+                                <th>Exposure</th>
+                                <th>Camera</th>
+                                <th>Copies</th>
+                                <th>Locations / Paths</th>
+                            </tr>
+                        </thead>
+                        <tbody id="duplicatesBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="duplicatesPagination"></div>
+            </div>
+
             <!-- Data Table -->
             <div class="table-container">
                 <h3 class="chart-title">Data Explorer</h3>
@@ -681,6 +708,7 @@
             setupEventListeners();
             loadTargetGroups();
             loadSessions();
+            loadDuplicates();
             loadWhatsNew();
         }
 
@@ -867,6 +895,89 @@
 
             updateSortIndicators('#sessionsTable', column, sessSortAscending);
             renderSessions();
+        }
+
+        // Duplicates (files sharing a capture fingerprint across Locations)
+        let duplicateGroupsData = [];
+        let dupCurrentPage = 1;
+        const dupRowsPerPage = 50;
+
+        async function loadDuplicates() {
+            let payload;
+            try {
+                const response = await fetch('/api/duplicates');
+                if (!response.ok) return;
+                payload = await response.json();
+            } catch (err) {
+                return; // clustering hasn't been run yet, or server doesn't support it -- skip silently
+            }
+
+            duplicateGroupsData = payload.groups || [];
+            if (duplicateGroupsData.length === 0) return;
+
+            document.getElementById('duplicatesSection').style.display = 'block';
+            renderDuplicates();
+        }
+
+        function renderDuplicates() {
+            const totalCopies = duplicateGroupsData.reduce((sum, g) => sum + g.file_count, 0);
+            document.getElementById('duplicatesSummary').textContent =
+                `${duplicateGroupsData.length} duplicate group(s), ${totalCopies} file(s) total.`;
+
+            const startIdx = (dupCurrentPage - 1) * dupRowsPerPage;
+            const pageGroups = duplicateGroupsData.slice(startIdx, startIdx + dupRowsPerPage);
+
+            const tbody = document.getElementById('duplicatesBody');
+            tbody.innerHTML = pageGroups.map(g => {
+                const locationsList = g.files.map(f =>
+                    `<div>${f.location}: <code>${f.path}</code></div>`
+                ).join('');
+                return `<tr>
+                    <td>#${g.duplicate_group_id}</td>
+                    <td>${g.target || 'Unknown'}</td>
+                    <td>${g.date || '—'}</td>
+                    <td>${g.exposure != null ? parseFloat(g.exposure).toFixed(2) + 's' : '—'}</td>
+                    <td>${g.instrument || 'Unknown'}</td>
+                    <td>${g.file_count}</td>
+                    <td style="font-size: 0.8125rem;">${locationsList}</td>
+                </tr>`;
+            }).join('');
+
+            renderDuplicatesPagination();
+        }
+
+        function renderDuplicatesPagination() {
+            const totalPages = Math.ceil(duplicateGroupsData.length / dupRowsPerPage);
+            const pagination = document.getElementById('duplicatesPagination');
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            const maxButtons = 10;
+            let startPage = Math.max(1, dupCurrentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            startPage = Math.max(1, endPage - maxButtons + 1);
+
+            let html = `
+                <button onclick="changeDuplicatesPage(1)" ${dupCurrentPage === 1 ? 'disabled' : ''}>First</button>
+                <button onclick="changeDuplicatesPage(${dupCurrentPage - 1})" ${dupCurrentPage === 1 ? 'disabled' : ''}>Previous</button>
+            `;
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button onclick="changeDuplicatesPage(${i})" class="${i === dupCurrentPage ? 'active' : ''}">${i}</button>`;
+            }
+            html += `
+                <button onclick="changeDuplicatesPage(${dupCurrentPage + 1})" ${dupCurrentPage === totalPages ? 'disabled' : ''}>Next</button>
+                <button onclick="changeDuplicatesPage(${totalPages})" ${dupCurrentPage === totalPages ? 'disabled' : ''}>Last</button>
+            `;
+            pagination.innerHTML = html;
+        }
+
+        function changeDuplicatesPage(page) {
+            const totalPages = Math.ceil(duplicateGroupsData.length / dupRowsPerPage);
+            if (page < 1 || page > totalPages) return;
+            dupCurrentPage = page;
+            renderDuplicates();
         }
 
         // What's New Since Last Scan
@@ -1302,6 +1413,10 @@
                         value = `<span class="badge ${badgeClass}">${value}</span>`;
                     } else if (h === 'exposure') {
                         value = parseFloat(value).toFixed(2) + 's';
+                    } else if (h === 'duplicate_group_id') {
+                        value = value != null
+                            ? `<span class="badge badge-processed" title="Duplicate group #${value}">🔁 duplicate</span>`
+                            : '';
                     }
                     return `<td>${value}</td>`;
                 }).join('') + '</tr>';

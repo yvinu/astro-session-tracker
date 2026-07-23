@@ -77,6 +77,15 @@ def list_target_groups():
         conn.close()
 
 
+@app.get("/api/duplicates")
+def list_duplicates():
+    conn = get_conn()
+    try:
+        return {"groups": storage.get_duplicate_groups_summary(conn)}
+    finally:
+        conn.close()
+
+
 @app.get("/api/sessions")
 def list_sessions():
     conn = get_conn()

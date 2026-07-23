@@ -116,4 +116,54 @@ def test_get_files_for_target_group_excludes_redundant_duplicate_copies(tmp_path
     files_unfiltered = storage.get_files_for_target_group(conn, target_group_id)
     assert len(files_unfiltered) == 2
 
+
+def test_get_duplicate_groups_summary_groups_member_files_by_location(tmp_path):
+    db_path = str(tmp_path / "test.db")
+    conn = storage.connect(db_path)
+    storage.init_schema(conn)
+
+    id_a = _insert_file(conn, "/Volumes/DriveA/light_001.fits", exposure=30.0, first_seen_at="2026-01-01T00:00:00")
+    id_b = _insert_file(conn, "/Volumes/DriveB/light_001.fits", exposure=30.0, first_seen_at="2026-01-02T00:00:00")
+    storage.init_schema(conn)  # re-run to backfill location for the two rows just inserted directly
+
+    now = storage._now()
+    cursor = conn.execute("INSERT INTO duplicate_groups (created_at, updated_at) VALUES (?, ?)", (now, now))
+    group_id = cursor.lastrowid
+    conn.execute("UPDATE files SET duplicate_group_id = ? WHERE id IN (?, ?)", (group_id, id_a, id_b))
+    conn.commit()
+
+    groups = storage.get_duplicate_groups_summary(conn)
+    assert len(groups) == 1
+    group = groups[0]
+    assert group["file_count"] == 2
+    assert group["exposure"] == 30.0
+    assert {f["location"] for f in group["files"]} == {"DriveA", "DriveB"}
+
+    conn.close()
+
+
+def test_get_all_files_includes_duplicate_group_id_but_csv_export_ignores_it(tmp_path):
+    from astro_tracker.exporter import records_to_csv
+
+    db_path = str(tmp_path / "test.db")
+    conn = storage.connect(db_path)
+    storage.init_schema(conn)
+
+    id_a = _insert_file(conn, "/a.fits", exposure=30.0, first_seen_at="2026-01-01T00:00:00")
+    conn.commit()
+    now = storage._now()
+    cursor = conn.execute("INSERT INTO duplicate_groups (created_at, updated_at) VALUES (?, ?)", (now, now))
+    group_id = cursor.lastrowid
+    conn.execute("UPDATE files SET duplicate_group_id = ? WHERE id = ?", (group_id, id_a))
+    conn.commit()
+
+    records = storage.get_all_files(conn)
+    assert records[0]["duplicate_group_id"] == group_id
+
+    csv_text = records_to_csv(records)  # must not raise despite the extra field
+    header_line = csv_text.splitlines()[0]
+    assert "duplicate_group_id" not in header_line
+
+    conn.close()
+
     conn.close()
