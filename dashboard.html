@@ -516,6 +516,24 @@
                         </select>
                     </div>
                     <div class="filter-item">
+                        <label>Camera</label>
+                        <select id="filterInstrument">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Resolution</label>
+                        <select id="filterResolution">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Binning</label>
+                        <select id="filterBinning">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
                         <label>Min Subframes per Target</label>
                         <input type="number" id="filterMinCount" placeholder="e.g. 100" min="0">
                     </div>
@@ -976,12 +994,18 @@
             const targets = [...new Set(dataSource.map(d => d.target))].filter(Boolean).sort();
             const filters = [...new Set(dataSource.map(d => d.filter))].filter(Boolean).sort();
             const locations = [...new Set(dataSource.map(d => d.location))].filter(Boolean).sort();
+            const instruments = [...new Set(dataSource.map(d => d.instrument))].filter(Boolean).sort();
+            const resolutions = [...new Set(dataSource.map(d => d.resolution))].filter(Boolean).sort();
+            const binnings = [...new Set(dataSource.map(d => d.binning))].filter(Boolean).sort();
 
             populateSelect('filterCategory', categories);
             populateSelect('filterFrameType', frameTypes);
             populateSelect('filterTarget', targets);
             populateSelect('filterFilter', filters);
             populateSelect('filterLocation', locations);
+            populateSelect('filterInstrument', instruments);
+            populateSelect('filterResolution', resolutions);
+            populateSelect('filterBinning', binnings);
         }
 
         function populateSelect(id, options) {
@@ -1381,6 +1405,9 @@
             const target = document.getElementById('filterTarget').value;
             const filter = document.getElementById('filterFilter').value;
             const location = document.getElementById('filterLocation').value;
+            const instrument = document.getElementById('filterInstrument').value;
+            const resolution = document.getElementById('filterResolution').value;
+            const binning = document.getElementById('filterBinning').value;
             const search = document.getElementById('filterSearch').value.toLowerCase();
             const minCount = parseInt(document.getElementById('filterMinCount').value) || 0;
 
@@ -1406,6 +1433,9 @@
                 if (target && row.target !== target) return false;
                 if (filter && row.filter !== filter) return false;
                 if (location && row.location !== location) return false;
+                if (instrument && row.instrument !== instrument) return false;
+                if (resolution && row.resolution !== resolution) return false;
+                if (binning && row.binning !== binning) return false;
                 if (search && !row.file_name.toLowerCase().includes(search)) return false;
 
                 // Apply minimum subframe count filter
@@ -1427,6 +1457,9 @@
             document.getElementById('filterTarget').value = '';
             document.getElementById('filterFilter').value = '';
             document.getElementById('filterLocation').value = '';
+            document.getElementById('filterInstrument').value = '';
+            document.getElementById('filterResolution').value = '';
+            document.getElementById('filterBinning').value = '';
             document.getElementById('filterSearch').value = '';
             document.getElementById('filterMinCount').value = '';
             document.getElementById('tableSearch').value = '';
@@ -1466,6 +1499,9 @@
             document.getElementById('filterTarget').addEventListener('change', applyFilters);
             document.getElementById('filterFilter').addEventListener('change', applyFilters);
             document.getElementById('filterLocation').addEventListener('change', applyFilters);
+            document.getElementById('filterInstrument').addEventListener('change', applyFilters);
+            document.getElementById('filterResolution').addEventListener('change', applyFilters);
+            document.getElementById('filterBinning').addEventListener('change', applyFilters);
             document.getElementById('filterSearch').addEventListener('input', applyFilters);
             document.getElementById('filterMinCount').addEventListener('input', applyFilters);
             document.getElementById('tableSearch').addEventListener('input', function () {

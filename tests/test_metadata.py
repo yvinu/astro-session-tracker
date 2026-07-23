@@ -93,3 +93,24 @@ class TestGetFitsMetadata:
         path = make_fits("light_001.fits", {"OBJECT": "M31"})
         meta = get_fits_metadata(path)
         assert meta["location"] == parse_location(path)
+
+    def test_resolution_reflects_actual_image_dimensions(self, make_fits):
+        # NAXIS1/NAXIS2 are structural FITS keywords astropy derives from the
+        # real data array (width=cols=NAXIS1, height=rows=NAXIS2) -- shape
+        # (3672, 5496) means 3672 rows x 5496 cols.
+        path = make_fits("light_001.fits", {}, shape=(3672, 5496))
+        meta = get_fits_metadata(path)
+        assert meta["resolution"] == "5496x3672"
+
+    def test_binning_extracted_when_present(self, make_fits):
+        path = make_fits("light_001.fits", {"XBINNING": 2, "YBINNING": 2})
+        meta = get_fits_metadata(path)
+        assert meta["binning"] == "2x2"
+
+    def test_binning_unknown_when_missing(self, make_fits):
+        # XBINNING/YBINNING are optional header cards, unlike NAXIS1/NAXIS2
+        # which astropy always derives from the data array -- many real
+        # observatory headers omit binning entirely.
+        path = make_fits("no_headers.fits", {})
+        meta = get_fits_metadata(path)
+        assert meta["binning"] == "Unknown"

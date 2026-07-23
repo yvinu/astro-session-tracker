@@ -87,6 +87,19 @@ def _is_processed(file_name, normalized_frame_type):
     return is_processed
 
 
+def _format_dimensions(width, height):
+    """Format a (width, height) header pair as "WIDTHxHEIGHT", or "Unknown" if either is missing/malformed.
+
+    Shared by resolution (NAXIS1/NAXIS2) and binning (XBINNING/YBINNING).
+    """
+    if width is None or height is None:
+        return "Unknown"
+    try:
+        return f"{int(width)}x{int(height)}"
+    except (TypeError, ValueError):
+        return "Unknown"
+
+
 def get_xisf_metadata(file_path):
     """Extract metadata from an XISF file, or None if extraction fails."""
     try:
@@ -111,6 +124,8 @@ def get_xisf_metadata(file_path):
             "temp": meta.get("SET-TEMP", meta.get("CCD-TEMP", "N/A")),
             "filter": meta.get("FILTER", "No Filter"),
             "instrument": meta.get("INSTRUME", meta.get("INSTRUMENT", "Unknown")),
+            "resolution": _format_dimensions(meta.get("NAXIS1"), meta.get("NAXIS2")),
+            "binning": _format_dimensions(meta.get("XBINNING"), meta.get("YBINNING")),
             "ra": meta.get("RA", meta.get("OBJCTRA", None)),
             "dec": meta.get("DEC", meta.get("OBJCTDEC", None)),
         }
@@ -142,6 +157,8 @@ def get_fits_metadata(file_path):
                 "temp": header.get("SET-TEMP", header.get("CCD-TEMP", "N/A")),
                 "filter": header.get("FILTER", "No Filter"),
                 "instrument": header.get("INSTRUME", "Unknown"),
+                "resolution": _format_dimensions(header.get("NAXIS1"), header.get("NAXIS2")),
+                "binning": _format_dimensions(header.get("XBINNING"), header.get("YBINNING")),
                 "ra": header.get("RA", header.get("OBJCTRA", None)),
                 "dec": header.get("DEC", header.get("OBJCTDEC", None)),
             }
