@@ -191,22 +191,65 @@ def finish_scan_run(conn, scan_run_id, new_count, updated_count, skipped_count, 
     conn.commit()
 
 
-def get_category_breakdown(conn):
+def get_duplicate_exclusion_ids(conn):
+    """Return the file ids to exclude from aggregate stats/integration totals.
+
+    Every physical copy in a duplicate group is excluded except its
+    earliest-first_seen_at representative (ties broken by lowest id) --
+    see ADR-0002. Files with no duplicate_group_id are never excluded.
+    This only affects aggregate totals; get_all_files (the raw file
+    table/CSV export) still returns every physical row.
+    """
     rows = conn.execute(
-        "SELECT file_category, COUNT(*) as count FROM files GROUP BY file_category ORDER BY count DESC"
+        """SELECT id, duplicate_group_id FROM files
+           WHERE duplicate_group_id IS NOT NULL
+           ORDER BY duplicate_group_id, first_seen_at ASC, id ASC"""
     ).fetchall()
+    excluded = set()
+    seen_groups = set()
+    for row in rows:
+        gid = row["duplicate_group_id"]
+        if gid in seen_groups:
+            excluded.add(row["id"])
+        else:
+            seen_groups.add(gid)
+    return excluded
+
+
+def _exclude_ids_clause(exclude_ids):
+    """Build a parameterized "id NOT IN (...)" clause, or ("", []) if there's nothing to exclude."""
+    if not exclude_ids:
+        return "", []
+    placeholders = ",".join("?" * len(exclude_ids))
+    return f"id NOT IN ({placeholders})", list(exclude_ids)
+
+
+def get_category_breakdown(conn, exclude_ids=None):
+    where_clause, params = _exclude_ids_clause(exclude_ids)
+    query = "SELECT file_category, COUNT(*) as count FROM files"
+    if where_clause:
+        query += f" WHERE {where_clause}"
+    query += " GROUP BY file_category ORDER BY count DESC"
+    rows = conn.execute(query, params).fetchall()
     return [(row["file_category"], row["count"]) for row in rows]
 
 
-def get_frame_type_breakdown(conn):
-    rows = conn.execute(
-        "SELECT frame_type, COUNT(*) as count FROM files GROUP BY frame_type ORDER BY count DESC"
-    ).fetchall()
+def get_frame_type_breakdown(conn, exclude_ids=None):
+    where_clause, params = _exclude_ids_clause(exclude_ids)
+    query = "SELECT frame_type, COUNT(*) as count FROM files"
+    if where_clause:
+        query += f" WHERE {where_clause}"
+    query += " GROUP BY frame_type ORDER BY count DESC"
+    rows = conn.execute(query, params).fetchall()
     return [(row["frame_type"], row["count"]) for row in rows]
 
 
-def get_total_file_count(conn):
-    row = conn.execute("SELECT COUNT(*) as count FROM files").fetchone()
+def get_total_file_count(conn, exclude_ids=None):
+    where_clause, params = _exclude_ids_clause(exclude_ids)
+    query = "SELECT COUNT(*) as count FROM files"
+    if where_clause:
+        query += f" WHERE {where_clause}"
+    row = conn.execute(query, params).fetchone()
     return row["count"]
 
 
@@ -222,38 +265,55 @@ def get_all_files(conn):
     return [{col: row[col] for col in columns} for row in rows]
 
 
-def get_unique_target_count(conn):
-    row = conn.execute(
-        "SELECT COUNT(DISTINCT target) as count FROM files WHERE target IS NOT NULL AND target != 'Unknown'"
-    ).fetchone()
+def get_unique_target_count(conn, exclude_ids=None):
+    where_clause, params = _exclude_ids_clause(exclude_ids)
+    query = "SELECT COUNT(DISTINCT target) as count FROM files WHERE target IS NOT NULL AND target != 'Unknown'"
+    if where_clause:
+        query += f" AND {where_clause}"
+    row = conn.execute(query, params).fetchone()
     return row["count"]
 
 
-def get_total_exposure(conn):
-    row = conn.execute("SELECT COALESCE(SUM(exposure), 0) as total FROM files").fetchone()
+def get_total_exposure(conn, exclude_ids=None):
+    where_clause, params = _exclude_ids_clause(exclude_ids)
+    query = "SELECT COALESCE(SUM(exposure), 0) as total FROM files"
+    if where_clause:
+        query += f" WHERE {where_clause}"
+    row = conn.execute(query, params).fetchone()
     return row["total"]
 
 
-def get_filter_breakdown(conn):
-    rows = conn.execute(
-        """SELECT filter, COUNT(*) as count FROM files
-           WHERE filter IS NOT NULL AND filter != 'No Filter'
-           GROUP BY filter ORDER BY count DESC"""
-    ).fetchall()
+def get_filter_breakdown(conn, exclude_ids=None):
+    where_clause, params = _exclude_ids_clause(exclude_ids)
+    query = "SELECT filter, COUNT(*) as count FROM files WHERE filter IS NOT NULL AND filter != 'No Filter'"
+    if where_clause:
+        query += f" AND {where_clause}"
+    query += " GROUP BY filter ORDER BY count DESC"
+    rows = conn.execute(query, params).fetchall()
     return [(row["filter"], row["count"]) for row in rows]
 
 
 def get_summary_stats(conn):
-    category_counts = dict(get_category_breakdown(conn))
+    """Library-wide stats shown on the dashboard.
+
+    Each duplicate group counts once toward these totals (via
+    get_duplicate_exclusion_ids) -- this is a distinct concern from
+    get_total_file_count and friends' other callers (the scan CLI/scan
+    job's post-scan summary), which intentionally keep reporting the
+    literal physical row count for "here's what this scan run touched"
+    and are NOT deduplicated.
+    """
+    exclude_ids = get_duplicate_exclusion_ids(conn)
+    category_counts = dict(get_category_breakdown(conn, exclude_ids))
     return {
-        "total_files": get_total_file_count(conn),
+        "total_files": get_total_file_count(conn, exclude_ids),
         "processed": category_counts.get("Processed", 0),
         "subframes": category_counts.get("Subframe", 0),
-        "unique_targets": get_unique_target_count(conn),
-        "total_exposure_seconds": get_total_exposure(conn),
-        "category_breakdown": get_category_breakdown(conn),
-        "frame_type_breakdown": get_frame_type_breakdown(conn),
-        "filter_breakdown": get_filter_breakdown(conn),
+        "unique_targets": get_unique_target_count(conn, exclude_ids),
+        "total_exposure_seconds": get_total_exposure(conn, exclude_ids),
+        "category_breakdown": get_category_breakdown(conn, exclude_ids),
+        "frame_type_breakdown": get_frame_type_breakdown(conn, exclude_ids),
+        "filter_breakdown": get_filter_breakdown(conn, exclude_ids),
     }
 
 
@@ -418,12 +478,19 @@ def get_target_groups_summary(conn):
     ]
 
 
-def get_files_for_target_group(conn, target_group_id):
-    """Return frame_type/date/exposure for every file in a target group, for the integration calculator."""
-    rows = conn.execute(
-        "SELECT frame_type, date, exposure FROM files WHERE target_group_id = ?",
-        (target_group_id,),
-    ).fetchall()
+def get_files_for_target_group(conn, target_group_id, exclude_ids=None):
+    """Return frame_type/date/exposure for every file in a target group, for the integration calculator.
+
+    Each duplicate group counts once toward integration time -- pass
+    exclude_ids (from get_duplicate_exclusion_ids) to omit non-representative
+    copies, consistent with get_summary_stats.
+    """
+    where_clause, params = _exclude_ids_clause(exclude_ids)
+    query = "SELECT frame_type, date, exposure FROM files WHERE target_group_id = ?"
+    query_params = [target_group_id, *params]
+    if where_clause:
+        query += f" AND {where_clause}"
+    rows = conn.execute(query, query_params).fetchall()
     return [
         {"frame_type": row["frame_type"], "date": row["date"], "exposure": row["exposure"]}
         for row in rows

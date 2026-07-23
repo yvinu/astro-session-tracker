@@ -63,9 +63,10 @@ def get_stats():
 def list_target_groups():
     conn = get_conn()
     try:
+        exclude_ids = storage.get_duplicate_exclusion_ids(conn)
         groups = storage.get_target_groups_summary(conn)
         for group in groups:
-            group_files = storage.get_files_for_target_group(conn, group["target_group_id"])
+            group_files = storage.get_files_for_target_group(conn, group["target_group_id"], exclude_ids)
             group["integration_seconds"] = integration.total_integration_seconds(group_files)
             group["mean_midpoint"] = integration.grand_integrated_mean_midpoint(group_files)
         return {
