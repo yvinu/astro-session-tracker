@@ -128,8 +128,14 @@ def get_file_mtime(conn, path):
     return row["mtime"] if row else None
 
 
-def upsert_file(conn, path, mtime, size, metadata):
+def upsert_file(conn, path, mtime, size, metadata, force=False):
     """Insert or update a file's row based on its stored mtime.
+
+    `force=True` re-writes the row even when mtime is unchanged, for
+    backfilling fields (e.g. resolution/binning/optical_train) that need a
+    header re-read on files already in the database -- without it, a
+    matching mtime would otherwise report "unchanged" and discard the
+    freshly re-parsed metadata.
 
     Returns "inserted", "updated", or "unchanged". Does not commit.
     """
@@ -146,7 +152,7 @@ def upsert_file(conn, path, mtime, size, metadata):
         )
         return "inserted"
 
-    if existing_mtime != mtime:
+    if existing_mtime != mtime or force:
         values = [metadata.get(col) for col in FILE_COLUMNS]
         set_clause = ", ".join(f"{col} = ?" for col in FILE_COLUMNS)
         conn.execute(

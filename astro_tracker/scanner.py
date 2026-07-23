@@ -35,7 +35,7 @@ def find_image_files(directory):
                 yield os.path.join(root, file)
 
 
-def scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None):
+def scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None, force=False):
     """Incrementally scan `directory` into the SQLite database at `db_path`.
 
     Returns a dict of counts: new, updated, skipped, failed, total_seen, cancelled.
@@ -45,6 +45,14 @@ def scan_directory(directory, db_path, error_log_path=None, progress_callback=No
     is committed as usual (partial progress is kept, not rolled back),
     and counts["cancelled"] is set to True so callers can tell a stopped
     scan apart from one that ran to completion.
+
+    `force=True` re-parses every file's header and re-writes its row even
+    when path+mtime match what's already stored, bypassing both the
+    skip-unchanged shortcut below and storage.upsert_file's own mtime
+    check. Ordinary scans stay fast; this is only for backfilling fields
+    that need a header re-read on files scanned before those fields
+    existed (e.g. resolution/binning/optical_train) -- an explicit,
+    on-demand action, never automatic.
     """
     conn = storage.connect(db_path)
     storage.init_schema(conn)
@@ -73,7 +81,7 @@ def scan_directory(directory, db_path, error_log_path=None, progress_callback=No
         mtime = stat.st_mtime
         existing_mtime = storage.get_file_mtime(conn, file_path)
 
-        if existing_mtime is not None and existing_mtime == mtime:
+        if not force and existing_mtime is not None and existing_mtime == mtime:
             counts["skipped"] += 1
             if progress_callback:
                 progress_callback(counts, file_path, "skipped")
@@ -96,7 +104,7 @@ def scan_directory(directory, db_path, error_log_path=None, progress_callback=No
             continue
 
         try:
-            status = storage.upsert_file(conn, file_path, mtime, stat.st_size, meta)
+            status = storage.upsert_file(conn, file_path, mtime, stat.st_size, meta, force=force)
         except Exception as e:
             counts["failed"] += 1
             if error_log_path:
@@ -184,6 +192,12 @@ def main():
                               'session derivation against files already in the database. Implies '
                               '--cluster and ignores -d/--directory; useful for large libraries '
                               'where re-walking the filesystem just to re-cluster is wasted time.')
+    parser.add_argument('--force', action='store_true',
+                         help='Re-parse every file\'s header and re-write its row even when path+mtime '
+                              'match what\'s already stored. Use this once after upgrading to backfill '
+                              'fields that need a header re-read (e.g. resolution/binning/optical_train) '
+                              'on files scanned before those fields existed. Ordinary scans should omit '
+                              'this -- it re-reads every file, unlike the normal incremental skip.')
     args = parser.parse_args()
 
     if args.cluster_only:
@@ -202,9 +216,13 @@ def main():
 
     print(f"Scanning {args.directory}...")
     print(f"Database: {args.db}")
+    if args.force:
+        print("Force mode: re-parsing every file regardless of mtime")
     print("-" * 60)
 
-    counts = scan_directory(args.directory, args.db, args.error_log, progress_callback=_print_progress)
+    counts = scan_directory(
+        args.directory, args.db, args.error_log, progress_callback=_print_progress, force=args.force
+    )
 
     print()
     print("-" * 60)

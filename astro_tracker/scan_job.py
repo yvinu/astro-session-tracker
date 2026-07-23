@@ -31,11 +31,12 @@ class JobAlreadyRunningError(Exception):
 class ScanJob:
     """One scan run's mutable state, updated live from the background thread."""
 
-    def __init__(self, job_id, mode, directory, db_path):
+    def __init__(self, job_id, mode, directory, db_path, force=False):
         self.job_id = job_id
         self.mode = mode
         self.directory = directory
         self.db_path = db_path
+        self.force = force
         self.state = STATE_RUNNING
         self.counts = {"new": 0, "updated": 0, "skipped": 0, "failed": 0, "total_seen": 0, "cancelled": False}
         self.failures = []
@@ -57,6 +58,7 @@ class ScanJob:
             "job_id": self.job_id,
             "mode": self.mode,
             "directory": self.directory,
+            "force": self.force,
             "state": self.state,
             "counts": dict(self.counts),
             "failures": list(self.failures),
@@ -80,14 +82,14 @@ class ScanJobManager:
                 return None
             return self._job.to_status_dict()
 
-    def start(self, mode, directory, db_path):
+    def start(self, mode, directory, db_path, force=False):
         if mode not in VALID_MODES:
             raise ValueError(f"Invalid mode: {mode}")
 
         with self._lock:
             if self._job is not None and self._job.state == STATE_RUNNING:
                 raise JobAlreadyRunningError("A scan is already running")
-            job = ScanJob(self._next_id, mode, directory, db_path)
+            job = ScanJob(self._next_id, mode, directory, db_path, force=force)
             self._next_id += 1
             self._job = job
 
@@ -117,6 +119,7 @@ class ScanJobManager:
                     error_log_path=scanner.DEFAULT_ERROR_LOG,
                     progress_callback=lambda c, p, s, d=None: self._on_progress(job, c, p, s, d),
                     should_stop=job.should_stop,
+                    force=job.force,
                 )
                 job.counts.update(final_counts)
 

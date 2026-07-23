@@ -429,6 +429,16 @@
                 <p class="hint">Browse opens the native macOS folder picker on this machine.</p>
             </div>
 
+            <div class="field" id="forceField">
+                <label class="mode-option">
+                    <input type="checkbox" id="forceCheckbox">
+                    <div class="mode-option-text">
+                        <strong>Force re-parse</strong>
+                        <span>Re-read every file's header even if it hasn't changed since the last scan. Slower -- only needed once to backfill fields added after files were already scanned.</span>
+                    </div>
+                </label>
+            </div>
+
             <div class="actions">
                 <button type="button" class="btn-primary" id="startBtn">Start Scan</button>
             </div>
@@ -484,6 +494,8 @@
         const resultsPanel = document.getElementById('resultsPanel');
         const folderField = document.getElementById('folderField');
         const folderInput = document.getElementById('folderInput');
+        const forceField = document.getElementById('forceField');
+        const forceCheckbox = document.getElementById('forceCheckbox');
         const recentDirs = document.getElementById('recentDirs');
         const browseBtn = document.getElementById('browseBtn');
         const startBtn = document.getElementById('startBtn');
@@ -504,7 +516,9 @@
         }
 
         function updateFolderVisibility() {
-            folderField.classList.toggle('hidden', selectedMode() === 'cluster_only');
+            const isClusterOnly = selectedMode() === 'cluster_only';
+            folderField.classList.toggle('hidden', isClusterOnly);
+            forceField.classList.toggle('hidden', isClusterOnly);
         }
 
         document.querySelectorAll('input[name="mode"]').forEach(el => {
@@ -559,6 +573,7 @@
             formError.classList.add('hidden');
             const mode = selectedMode();
             const directory = mode === 'cluster_only' ? null : folderInput.value.trim();
+            const force = mode !== 'cluster_only' && forceCheckbox.checked;
 
             if (mode !== 'cluster_only' && !directory) {
                 formError.textContent = 'Choose a folder to scan.';
@@ -571,7 +586,7 @@
                 const res = await fetch('/api/scan/start', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mode, directory }),
+                    body: JSON.stringify({ mode, directory, force }),
                 });
                 const data = await res.json();
                 if (!res.ok) {
@@ -619,7 +634,8 @@
         function renderProgress(status) {
             const meta = document.getElementById('progressMeta');
             meta.textContent = `${modeLabels[status.mode] || status.mode}` +
-                (status.directory ? ` — ${status.directory}` : '');
+                (status.directory ? ` — ${status.directory}` : '') +
+                (status.force ? ' (force re-parse)' : '');
 
             const counts = status.counts || {};
             const grid = document.getElementById('progressCounts');
@@ -661,7 +677,8 @@
                 : status.state === 'cancelled' ? 'Scan cancelled'
                 : 'Scan complete';
             meta.textContent = `${modeLabels[status.mode] || status.mode}` +
-                (status.directory ? ` — ${status.directory}` : '');
+                (status.directory ? ` — ${status.directory}` : '') +
+                (status.force ? ' (force re-parse)' : '');
 
             const counts = status.counts || {};
             const grid = document.getElementById('resultsCounts');

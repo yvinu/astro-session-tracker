@@ -121,10 +121,10 @@ def test_db_insert_failure_is_logged_and_scan_continues(tmp_path, make_fits, mon
 
     original_upsert = storage.upsert_file
 
-    def flaky_upsert(conn, path, mtime, size, metadata):
+    def flaky_upsert(conn, path, mtime, size, metadata, force=False):
         if path.endswith("a.fits"):
             raise sqlite3.IntegrityError("UNIQUE constraint failed: files.path")
-        return original_upsert(conn, path, mtime, size, metadata)
+        return original_upsert(conn, path, mtime, size, metadata, force=force)
 
     monkeypatch.setattr(storage, "upsert_file", flaky_upsert)
 
@@ -147,7 +147,7 @@ def test_db_insert_failure_passes_reason_to_progress_callback(tmp_path, make_fit
     make_fits("a.fits", {"IMAGETYP": "Light Frame"})
     db_path = str(tmp_path / "test.db")
 
-    def always_fails(conn, path, mtime, size, metadata):
+    def always_fails(conn, path, mtime, size, metadata, force=False):
         raise sqlite3.IntegrityError("UNIQUE constraint failed: files.path")
 
     monkeypatch.setattr(storage, "upsert_file", always_fails)
@@ -182,6 +182,37 @@ def test_log_error_accepts_plain_string_reason(tmp_path):
     with open(error_log) as f:
         content = f.read()
     assert "Failed to extract metadata" in content
+
+
+def test_force_reparses_unchanged_file_and_updates_stored_fields(tmp_path, make_fits):
+    path = make_fits("a.fits", {"IMAGETYP": "Light Frame", "OBJECT": "M31"})
+    db_path = str(tmp_path / "test.db")
+
+    scan_directory(str(tmp_path), db_path)
+    original_mtime = os.stat(path).st_mtime
+
+    # Rewrite the file's header content but restore the original mtime
+    # afterward, simulating a field added after this file was already
+    # scanned -- without --force, a plain rescan sees the unchanged mtime
+    # and skips it, so the new header content never gets re-read.
+    make_fits("a.fits", {"IMAGETYP": "Light Frame", "OBJECT": "M42"})
+    os.utime(path, (original_mtime, original_mtime))
+
+    counts = scan_directory(str(tmp_path), db_path)
+    assert counts["skipped"] == 1
+
+    conn = storage.connect(db_path)
+    assert conn.execute("SELECT target FROM files WHERE path = ?", (path,)).fetchone()["target"] == "M31"
+    conn.close()
+
+    counts = scan_directory(str(tmp_path), db_path, force=True)
+    assert counts["updated"] == 1
+    assert counts["skipped"] == 0
+
+    conn = storage.connect(db_path)
+    assert conn.execute("SELECT target FROM files WHERE path = ?", (path,)).fetchone()["target"] == "M42"
+    assert storage.get_total_file_count(conn) == 1  # still no duplicate row
+    conn.close()
 
 
 def test_normal_scan_is_not_marked_cancelled(tmp_path, make_fits):

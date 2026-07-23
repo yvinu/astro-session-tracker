@@ -133,6 +133,7 @@ def export_csv():
 class ScanStartRequest(BaseModel):
     mode: str
     directory: Optional[str] = None
+    force: bool = False
 
 
 @app.post("/api/scan/start")
@@ -147,7 +148,7 @@ def start_scan(body: ScanStartRequest):
             raise HTTPException(status_code=400, detail=f"'{body.directory}' is not a directory")
 
     try:
-        return scan_job.job_manager.start(body.mode, body.directory, DB_PATH)
+        return scan_job.job_manager.start(body.mode, body.directory, DB_PATH, force=body.force)
     except scan_job.JobAlreadyRunningError as e:
         raise HTTPException(status_code=409, detail=str(e))
 

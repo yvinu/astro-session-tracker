@@ -27,7 +27,7 @@ def _wait_until_finished(manager, timeout=2.0):
 
 
 def _make_blocking_scan(started_event, release_event):
-    def fake_scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None):
+    def fake_scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None, force=False):
         counts = {"new": 0, "updated": 0, "skipped": 0, "failed": 0, "total_seen": 0, "cancelled": False}
         started_event.set()
         while not release_event.is_set():
@@ -135,7 +135,7 @@ def test_full_cluster_mode_runs_scan_then_clustering(monkeypatch):
     _stub_storage(monkeypatch)
     call_order = []
 
-    def fake_scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None):
+    def fake_scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None, force=False):
         call_order.append("scan")
         return {"new": 3, "updated": 0, "skipped": 0, "failed": 0, "total_seen": 3, "cancelled": False}
 
@@ -178,7 +178,7 @@ def test_full_mode_without_cluster_does_not_run_clustering(monkeypatch):
 def test_failures_are_collected_with_path_and_reason(monkeypatch):
     _stub_storage(monkeypatch)
 
-    def fake_scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None):
+    def fake_scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None, force=False):
         counts = {"new": 0, "updated": 0, "skipped": 0, "failed": 1, "total_seen": 1, "cancelled": False}
         if progress_callback:
             progress_callback(counts, "/bad/file.fits", "failed", "corrupt header")
