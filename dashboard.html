@@ -278,6 +278,19 @@
             color: var(--accent-primary);
         }
 
+        .sort-arrow {
+            display: inline-block;
+            margin-left: 0.35em;
+            opacity: 0.4;
+            font-size: 0.7em;
+        }
+
+        th.sorted-asc .sort-arrow,
+        th.sorted-desc .sort-arrow {
+            opacity: 1;
+            color: var(--accent-primary);
+        }
+
         td {
             padding: 0.875rem;
             border-bottom: 1px solid var(--border-color);
@@ -544,12 +557,12 @@
                     <table id="targetGroupsTable">
                         <thead>
                             <tr>
-                                <th>Group</th>
-                                <th>Files</th>
-                                <th>Labels merged into this group</th>
-                                <th>Integration Time</th>
-                                <th>Mean Midpoint (UTC)</th>
-                                <th>Actions</th>
+                                <th onclick="sortTargetGroups('target_group_id')">Group<span class="sort-arrow"></span></th>
+                                <th onclick="sortTargetGroups('file_count')">Files<span class="sort-arrow"></span></th>
+                                <th onclick="sortTargetGroups('labels')">Labels merged into this group<span class="sort-arrow"></span></th>
+                                <th onclick="sortTargetGroups('integration_seconds')">Integration Time<span class="sort-arrow"></span></th>
+                                <th onclick="sortTargetGroups('mean_midpoint')">Mean Midpoint (UTC)<span class="sort-arrow"></span></th>
+                                <th style="cursor: default;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="targetGroupsBody"></tbody>
@@ -568,14 +581,14 @@
                     <table id="sessionsTable">
                         <thead>
                             <tr>
-                                <th>Session</th>
-                                <th>Night</th>
-                                <th>Target Group</th>
-                                <th>Labels</th>
-                                <th>Files</th>
-                                <th>Rating (1-5)</th>
-                                <th>Bortle (1-9)</th>
-                                <th>Notes</th>
+                                <th onclick="sortSessions('session_id')">Session<span class="sort-arrow"></span></th>
+                                <th onclick="sortSessions('observation_night')">Night<span class="sort-arrow"></span></th>
+                                <th onclick="sortSessions('target_group_id')">Target Group<span class="sort-arrow"></span></th>
+                                <th onclick="sortSessions('labels')">Labels<span class="sort-arrow"></span></th>
+                                <th onclick="sortSessions('file_count')">Files<span class="sort-arrow"></span></th>
+                                <th onclick="sortSessions('rating')">Rating (1-5)<span class="sort-arrow"></span></th>
+                                <th onclick="sortSessions('bortle')">Bortle (1-9)<span class="sort-arrow"></span></th>
+                                <th onclick="sortSessions('notes')">Notes<span class="sort-arrow"></span></th>
                             </tr>
                         </thead>
                         <tbody id="sessionsBody"></tbody>
@@ -642,6 +655,11 @@
         }
 
         // Target Groups (RA/DEC FOV clustering)
+        let targetGroupsData = [];
+        let tgUngroupedCount = 0;
+        let tgSortColumn = null;
+        let tgSortAscending = true;
+
         async function loadTargetGroups() {
             let payload;
             try {
@@ -652,11 +670,15 @@
                 return; // clustering hasn't been run yet, or server doesn't support it -- skip silently
             }
 
-            const groups = payload.groups || [];
-            if (groups.length === 0) return;
+            targetGroupsData = payload.groups || [];
+            if (targetGroupsData.length === 0) return;
 
+            tgUngroupedCount = payload.ungrouped_file_count || 0;
             document.getElementById('targetGroupsSection').style.display = 'block';
+            renderTargetGroups();
+        }
 
+        function renderTargetGroups() {
             const formatIntegrationTime = (seconds) => {
                 if (!seconds) return '—';
                 const hours = Math.floor(seconds / 3600);
@@ -665,7 +687,7 @@
             };
 
             const tbody = document.getElementById('targetGroupsBody');
-            tbody.innerHTML = groups.map(g => {
+            tbody.innerHTML = targetGroupsData.map(g => {
                 const multiLabel = g.labels.filter(l => l && l !== 'Unknown').length > 1;
                 const labelText = g.labels.filter(l => l).join(', ') || 'Unknown';
                 const midpointText = g.mean_midpoint
@@ -681,10 +703,27 @@
                 </tr>`;
             }).join('');
 
-            const ungrouped = payload.ungrouped_file_count || 0;
-            document.getElementById('ungroupedNote').textContent = ungrouped > 0
-                ? `${ungrouped} file(s) have no usable RA/DEC and are not shown in any group.`
+            document.getElementById('ungroupedNote').textContent = tgUngroupedCount > 0
+                ? `${tgUngroupedCount} file(s) have no usable RA/DEC and are not shown in any group.`
                 : '';
+        }
+
+        function sortTargetGroups(column) {
+            if (tgSortColumn === column) {
+                tgSortAscending = !tgSortAscending;
+            } else {
+                tgSortColumn = column;
+                tgSortAscending = true;
+            }
+
+            targetGroupsData.sort((a, b) => {
+                let aVal = column === 'labels' ? a.labels.filter(l => l).join(', ') : a[column];
+                let bVal = column === 'labels' ? b.labels.filter(l => l).join(', ') : b[column];
+                return compareValues(aVal, bVal, tgSortAscending);
+            });
+
+            updateSortIndicators('#targetGroupsTable', column, tgSortAscending);
+            renderTargetGroups();
         }
 
         // Export a target group's files into a Siril-shaped working folder (symlinks, no .ssf script).
@@ -732,6 +771,10 @@
         }
 
         // Sessions (target group + observation night)
+        let sessionsData = [];
+        let sessSortColumn = null;
+        let sessSortAscending = true;
+
         async function loadSessions() {
             let sessionList;
             try {
@@ -744,10 +787,14 @@
 
             if (!sessionList || sessionList.length === 0) return;
 
+            sessionsData = sessionList;
             document.getElementById('sessionsSection').style.display = 'block';
+            renderSessions();
+        }
 
+        function renderSessions() {
             const tbody = document.getElementById('sessionsBody');
-            tbody.innerHTML = sessionList.map(s => {
+            tbody.innerHTML = sessionsData.map(s => {
                 const labelText = s.labels.filter(l => l).join(', ') || 'Unknown';
                 return `<tr>
                     <td>#${s.session_id}</td>
@@ -772,6 +819,24 @@
                     </td>
                 </tr>`;
             }).join('');
+        }
+
+        function sortSessions(column) {
+            if (sessSortColumn === column) {
+                sessSortAscending = !sessSortAscending;
+            } else {
+                sessSortColumn = column;
+                sessSortAscending = true;
+            }
+
+            sessionsData.sort((a, b) => {
+                let aVal = column === 'labels' ? a.labels.filter(l => l).join(', ') : a[column];
+                let bVal = column === 'labels' ? b.labels.filter(l => l).join(', ') : b[column];
+                return compareValues(aVal, bVal, sessSortAscending);
+            });
+
+            updateSortIndicators('#sessionsTable', column, sessSortAscending);
+            renderSessions();
         }
 
         // What's New Since Last Scan
@@ -826,6 +891,8 @@
                     const err = await response.json().catch(() => ({}));
                     throw new Error(err.detail || `HTTP ${response.status}`);
                 }
+                const session = sessionsData.find(s => s.session_id === sessionId);
+                if (session) session[field] = body[field];
                 inputEl.style.borderColor = 'var(--accent-success)';
                 setTimeout(() => { inputEl.style.borderColor = ''; }, 800);
             } catch (err) {
@@ -1177,8 +1244,9 @@
 
             // Create header
             thead.innerHTML = '<tr>' + headers.map(h =>
-                `<th onclick="sortTable('${h}')">${h}</th>`
+                `<th onclick="sortTable('${h}')">${h}<span class="sort-arrow"></span></th>`
             ).join('') + '</tr>';
+            if (sortColumn) updateSortIndicators('#dataTable', sortColumn, sortAscending);
 
             // Paginate data
             const startIdx = (currentPage - 1) * rowsPerPage;
@@ -1261,25 +1329,41 @@
                 sortAscending = true;
             }
 
-            filteredData.sort((a, b) => {
-                let aVal = a[column];
-                let bVal = b[column];
-
-                // Try to parse as number
-                const aNum = parseFloat(aVal);
-                const bNum = parseFloat(bVal);
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    return sortAscending ? aNum - bNum : bNum - aNum;
-                }
-
-                // String comparison
-                if (aVal < bVal) return sortAscending ? -1 : 1;
-                if (aVal > bVal) return sortAscending ? 1 : -1;
-                return 0;
-            });
+            filteredData.sort((a, b) => compareValues(a[column], b[column], sortAscending));
 
             currentPage = 1;
             updateTable();
+        }
+
+        // Generic comparator: numeric when both sides parse as numbers, else string compare.
+        // Nullish/blank values always sort to the end, regardless of direction.
+        function compareValues(aVal, bVal, ascending) {
+            const aEmpty = aVal === null || aVal === undefined || aVal === '';
+            const bEmpty = bVal === null || bVal === undefined || bVal === '';
+            if (aEmpty && bEmpty) return 0;
+            if (aEmpty) return 1;
+            if (bEmpty) return -1;
+
+            const aNum = parseFloat(aVal);
+            const bNum = parseFloat(bVal);
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                return ascending ? aNum - bNum : bNum - aNum;
+            }
+
+            if (aVal < bVal) return ascending ? -1 : 1;
+            if (aVal > bVal) return ascending ? 1 : -1;
+            return 0;
+        }
+
+        // Update the sort arrow + sorted-column class on every <th> in a table, based on its onclick target.
+        function updateSortIndicators(tableSelector, activeColumn, ascending) {
+            document.querySelectorAll(`${tableSelector} thead th`).forEach(th => {
+                const arrow = th.querySelector('.sort-arrow');
+                const isActive = th.getAttribute('onclick')?.includes(`'${activeColumn}'`);
+                th.classList.toggle('sorted-asc', !!isActive && ascending);
+                th.classList.toggle('sorted-desc', !!isActive && !ascending);
+                if (arrow) arrow.textContent = isActive ? (ascending ? '▲' : '▼') : '';
+            });
         }
 
         // Apply Filters
