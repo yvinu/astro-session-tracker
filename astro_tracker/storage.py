@@ -474,7 +474,7 @@ def get_duplicate_groups_summary(conn):
     picking them from any one member row is correct, not arbitrary.
     """
     rows = conn.execute(
-        """SELECT duplicate_group_id, path, location, target, date, exposure, instrument
+        """SELECT duplicate_group_id, path, location, size, target, date, exposure, instrument
            FROM files
            WHERE duplicate_group_id IS NOT NULL
            ORDER BY duplicate_group_id, location, path"""
@@ -494,7 +494,7 @@ def get_duplicate_groups_summary(conn):
                 "files": [],
             }
             groups_by_id[gid] = group
-        group["files"].append({"path": row["path"], "location": row["location"]})
+        group["files"].append({"path": row["path"], "location": row["location"], "size": row["size"]})
 
     groups = list(groups_by_id.values())
     for group in groups:

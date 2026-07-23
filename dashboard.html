@@ -634,6 +634,22 @@
                     found at more than one Location — the same sub copied across drives.
                 </p>
                 <p class="stat-detail" id="duplicatesSummary" style="margin-bottom: 1rem;"></p>
+
+                <div class="filter-item" style="max-width: 320px; margin-bottom: 1rem;">
+                    <label for="canonicalLocationSelect">Canonical location (e.g. your NAS)</label>
+                    <select id="canonicalLocationSelect" onchange="onCanonicalLocationChange()">
+                        <option value="">Select a location…</option>
+                    </select>
+                </div>
+
+                <div id="reclaimSummarySection" style="display: none; margin-bottom: 1.5rem;">
+                    <p class="stat-detail" id="reclaimNoCanonicalNote" style="margin-bottom: 0.5rem;"></p>
+                    <div id="reclaimByLocationList" style="margin-bottom: 0.75rem;"></div>
+                    <button class="reset-btn" id="exportReclaimCandidatesBtn" onclick="exportReclaimCandidates()">
+                        ⬇️ Export redundant-copy paths
+                    </button>
+                </div>
+
                 <div style="overflow-x: auto;">
                     <table id="duplicatesTable">
                         <thead>
@@ -917,6 +933,7 @@
 
             document.getElementById('duplicatesSection').style.display = 'block';
             renderDuplicates();
+            populateCanonicalLocationOptions();
         }
 
         function renderDuplicates() {
@@ -978,6 +995,110 @@
             if (page < 1 || page > totalPages) return;
             dupCurrentPage = page;
             renderDuplicates();
+        }
+
+        // Reclaim summary: which Location is canonical (e.g. the NAS) is something
+        // only the user knows -- there's no way to infer it from a location's name,
+        // so it's picked from a dropdown rather than guessed.
+        let canonicalLocation = '';
+        let redundantPathsForExport = [];
+
+        function populateCanonicalLocationOptions() {
+            const locations = new Set();
+            duplicateGroupsData.forEach(g => g.files.forEach(f => locations.add(f.location)));
+
+            const select = document.getElementById('canonicalLocationSelect');
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select a location…</option>';
+            Array.from(locations).sort().forEach(loc => {
+                const option = document.createElement('option');
+                option.value = loc;
+                option.textContent = loc;
+                select.appendChild(option);
+            });
+            select.value = currentValue;
+        }
+
+        function onCanonicalLocationChange() {
+            canonicalLocation = document.getElementById('canonicalLocationSelect').value;
+            renderReclaimSummary();
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let value = bytes;
+            let unitIndex = 0;
+            while (value >= 1024 && unitIndex < units.length - 1) {
+                value /= 1024;
+                unitIndex++;
+            }
+            return `${value.toFixed(1)} ${units[unitIndex]}`;
+        }
+
+        function renderReclaimSummary() {
+            const section = document.getElementById('reclaimSummarySection');
+            if (!canonicalLocation) {
+                section.style.display = 'none';
+                return;
+            }
+
+            // For every duplicate group that has a copy at the canonical location,
+            // keep exactly one copy there and flag every other file in that group
+            // (including extra copies at the canonical location itself) as
+            // redundant. Groups with no canonical copy get no suggestion at all --
+            // there's no confident "safe to remove" answer for those.
+            const reclaimByLocation = {};
+            redundantPathsForExport = [];
+            let groupsWithoutCanonical = 0;
+
+            duplicateGroupsData.forEach(g => {
+                const canonicalFiles = g.files.filter(f => f.location === canonicalLocation);
+                if (canonicalFiles.length === 0) {
+                    groupsWithoutCanonical++;
+                    return;
+                }
+                const keepFile = canonicalFiles[0];
+                g.files.forEach(f => {
+                    if (f === keepFile) return;
+                    redundantPathsForExport.push(f.path);
+                    const bucket = reclaimByLocation[f.location] || { bytes: 0, count: 0 };
+                    bucket.bytes += f.size || 0;
+                    bucket.count += 1;
+                    reclaimByLocation[f.location] = bucket;
+                });
+            });
+
+            const list = document.getElementById('reclaimByLocationList');
+            const entries = Object.entries(reclaimByLocation).sort((a, b) => b[1].bytes - a[1].bytes);
+            list.innerHTML = entries.length === 0
+                ? '<p class="stat-detail">No redundant copies found relative to this canonical location.</p>'
+                : entries.map(([loc, { bytes, count }]) =>
+                    `<div>Reclaim <strong>${formatBytes(bytes)}</strong> on <strong>${loc}</strong> (${count} redundant file(s))</div>`
+                  ).join('');
+
+            document.getElementById('reclaimNoCanonicalNote').textContent = groupsWithoutCanonical > 0
+                ? `${groupsWithoutCanonical} duplicate group(s) have no copy on ${canonicalLocation} — no cleanup suggestion for these.`
+                : '';
+
+            section.style.display = 'block';
+        }
+
+        // Export the redundant-copy paths (from groups that DO have a canonical
+        // copy) as a plain text list -- one path per line -- for the user to feed
+        // into their own delete/cleanup process. This tool never deletes files.
+        function exportReclaimCandidates() {
+            if (redundantPathsForExport.length === 0) return;
+
+            const blob = new Blob([redundantPathsForExport.join('\n') + '\n'], { type: 'text/plain;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `redundant_copies_vs_${canonicalLocation}_${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
 
         // What's New Since Last Scan
