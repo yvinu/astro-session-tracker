@@ -1,8 +1,9 @@
 import os
+import sqlite3
 import time
 
 from astro_tracker import storage
-from astro_tracker.scanner import scan_directory
+from astro_tracker.scanner import log_error, scan_directory
 
 
 def test_first_scan_inserts_all_files(tmp_path, make_fits):
@@ -110,6 +111,77 @@ def test_failed_file_passes_reason_to_progress_callback(tmp_path):
     file_path, status, detail = calls[0]
     assert status == "failed"
     assert detail  # some non-empty reason string
+
+
+def test_db_insert_failure_is_logged_and_scan_continues(tmp_path, make_fits, monkeypatch):
+    make_fits("a.fits", {"IMAGETYP": "Light Frame"})
+    make_fits("b.fits", {"IMAGETYP": "Dark Frame"})
+    db_path = str(tmp_path / "test.db")
+    error_log = str(tmp_path / "errors.log")
+
+    original_upsert = storage.upsert_file
+
+    def flaky_upsert(conn, path, mtime, size, metadata):
+        if path.endswith("a.fits"):
+            raise sqlite3.IntegrityError("UNIQUE constraint failed: files.path")
+        return original_upsert(conn, path, mtime, size, metadata)
+
+    monkeypatch.setattr(storage, "upsert_file", flaky_upsert)
+
+    counts = scan_directory(str(tmp_path), db_path, error_log_path=error_log)
+
+    assert counts["failed"] == 1
+    assert counts["new"] == 1
+
+    conn = storage.connect(db_path)
+    assert storage.get_total_file_count(conn) == 1  # only b.fits made it in
+    conn.close()
+
+    with open(error_log) as f:
+        content = f.read()
+    assert "a.fits" in content
+    assert "IntegrityError" in content
+
+
+def test_db_insert_failure_passes_reason_to_progress_callback(tmp_path, make_fits, monkeypatch):
+    make_fits("a.fits", {"IMAGETYP": "Light Frame"})
+    db_path = str(tmp_path / "test.db")
+
+    def always_fails(conn, path, mtime, size, metadata):
+        raise sqlite3.IntegrityError("UNIQUE constraint failed: files.path")
+
+    monkeypatch.setattr(storage, "upsert_file", always_fails)
+
+    calls = []
+
+    def progress_callback(counts, file_path, status, detail=None):
+        calls.append((file_path, status, detail))
+
+    scan_directory(str(tmp_path), db_path, progress_callback=progress_callback)
+
+    assert len(calls) == 1
+    file_path, status, detail = calls[0]
+    assert status == "failed"
+    assert "UNIQUE constraint failed" in detail
+
+
+def test_log_error_includes_exception_type_name(tmp_path):
+    error_log = str(tmp_path / "errors.log")
+    log_error(error_log, "/some/file.fits", sqlite3.IntegrityError("UNIQUE constraint failed: files.path"))
+
+    with open(error_log) as f:
+        content = f.read()
+    assert "IntegrityError" in content
+    assert "UNIQUE constraint failed" in content
+
+
+def test_log_error_accepts_plain_string_reason(tmp_path):
+    error_log = str(tmp_path / "errors.log")
+    log_error(error_log, "/some/file.fits", "Failed to extract metadata")
+
+    with open(error_log) as f:
+        content = f.read()
+    assert "Failed to extract metadata" in content
 
 
 def test_normal_scan_is_not_marked_cancelled(tmp_path, make_fits):

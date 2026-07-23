@@ -21,9 +21,11 @@ IMAGE_EXTENSIONS = ('.fits', '.fit', '.fts', '.xisf')
 
 
 def log_error(error_log_path, file_path, error):
+    """Append an error log entry. `error` may be an exception (its type name is included) or a plain string reason."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    detail = f"{type(error).__name__}: {error}" if isinstance(error, BaseException) else str(error)
     with open(error_log_path, 'a') as f:
-        f.write(f"[{timestamp}] {file_path}: {error}\n")
+        f.write(f"[{timestamp}] {file_path}: {detail}\n")
 
 
 def find_image_files(directory):
@@ -77,23 +79,32 @@ def scan_directory(directory, db_path, error_log_path=None, progress_callback=No
                 progress_callback(counts, file_path, "skipped")
             continue
 
-        failure_reason = None
+        parse_error = None
         try:
             meta = get_metadata(file_path)
         except Exception as e:
             meta = None
-            failure_reason = str(e)
+            parse_error = e
 
         if meta is None:
-            failure_reason = failure_reason or "Failed to extract metadata"
             counts["failed"] += 1
+            failure_reason = str(parse_error) if parse_error is not None else "Failed to extract metadata"
             if error_log_path:
-                log_error(error_log_path, file_path, failure_reason)
+                log_error(error_log_path, file_path, parse_error if parse_error is not None else failure_reason)
             if progress_callback:
                 progress_callback(counts, file_path, "failed", failure_reason)
             continue
 
-        status = storage.upsert_file(conn, file_path, mtime, stat.st_size, meta)
+        try:
+            status = storage.upsert_file(conn, file_path, mtime, stat.st_size, meta)
+        except Exception as e:
+            counts["failed"] += 1
+            if error_log_path:
+                log_error(error_log_path, file_path, e)
+            if progress_callback:
+                progress_callback(counts, file_path, "failed", str(e))
+            continue
+
         status_to_count_key = {"inserted": "new", "updated": "updated", "unchanged": "skipped"}
         count_key = status_to_count_key[status]
         counts[count_key] += 1
