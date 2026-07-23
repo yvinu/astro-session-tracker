@@ -87,6 +87,25 @@ def _is_processed(file_name, normalized_frame_type):
     return is_processed
 
 
+def derive_optical_train(telescope, instrument, focal_length):
+    """Derive an Optical Train label from whatever subset of TELESCOP/INSTRUME/FOCALLEN headers are present.
+
+    Missing values are dropped from the joined label rather than forcing
+    the whole thing to "Unknown" -- a single missing field shouldn't dump
+    an otherwise-identifiable setup into an "Unknown" bucket. Only falls
+    back to "Unknown" when all three are absent. Friendly aliasing on top
+    of this raw derived label is deferred -- see CONTEXT.md.
+    """
+    parts = []
+    if telescope not in (None, ""):
+        parts.append(str(telescope).strip())
+    if instrument not in (None, ""):
+        parts.append(str(instrument).strip())
+    if focal_length not in (None, ""):
+        parts.append(f"{focal_length}mm")
+    return " | ".join(parts) if parts else "Unknown"
+
+
 def _format_dimensions(width, height):
     """Format a (width, height) header pair as "WIDTHxHEIGHT", or "Unknown" if either is missing/malformed.
 
@@ -126,6 +145,7 @@ def get_xisf_metadata(file_path):
             "instrument": meta.get("INSTRUME", meta.get("INSTRUMENT", "Unknown")),
             "resolution": _format_dimensions(meta.get("NAXIS1"), meta.get("NAXIS2")),
             "binning": _format_dimensions(meta.get("XBINNING"), meta.get("YBINNING")),
+            "optical_train": derive_optical_train(meta.get("TELESCOP"), meta.get("INSTRUME"), meta.get("FOCALLEN")),
             "ra": meta.get("RA", meta.get("OBJCTRA", None)),
             "dec": meta.get("DEC", meta.get("OBJCTDEC", None)),
         }
@@ -159,6 +179,9 @@ def get_fits_metadata(file_path):
                 "instrument": header.get("INSTRUME", "Unknown"),
                 "resolution": _format_dimensions(header.get("NAXIS1"), header.get("NAXIS2")),
                 "binning": _format_dimensions(header.get("XBINNING"), header.get("YBINNING")),
+                "optical_train": derive_optical_train(
+                    header.get("TELESCOP"), header.get("INSTRUME"), header.get("FOCALLEN")
+                ),
                 "ra": header.get("RA", header.get("OBJCTRA", None)),
                 "dec": header.get("DEC", header.get("OBJCTDEC", None)),
             }

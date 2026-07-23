@@ -1,5 +1,28 @@
 from astro_tracker.location import parse_location
-from astro_tracker.metadata import get_fits_metadata, normalize_frame_type
+from astro_tracker.metadata import derive_optical_train, get_fits_metadata, normalize_frame_type
+
+
+class TestDeriveOpticalTrain:
+    def test_all_fields_present(self):
+        assert derive_optical_train("Celestron NexStar 8SE", "ZWO ASI294MC Pro", 1200) == \
+            "Celestron NexStar 8SE | ZWO ASI294MC Pro | 1200mm"
+
+    def test_missing_telescope_uses_remaining_fields(self):
+        assert derive_optical_train(None, "ZWO ASI294MC Pro", 1200) == "ZWO ASI294MC Pro | 1200mm"
+
+    def test_missing_instrument_uses_remaining_fields(self):
+        assert derive_optical_train("Celestron NexStar 8SE", None, 1200) == "Celestron NexStar 8SE | 1200mm"
+
+    def test_missing_focal_length_uses_remaining_fields(self):
+        assert derive_optical_train("Celestron NexStar 8SE", "ZWO ASI294MC Pro", None) == \
+            "Celestron NexStar 8SE | ZWO ASI294MC Pro"
+
+    def test_only_one_field_present(self):
+        assert derive_optical_train(None, "Seestar S50", None) == "Seestar S50"
+
+    def test_all_missing_falls_back_to_unknown(self):
+        assert derive_optical_train(None, None, None) == "Unknown"
+        assert derive_optical_train("", "", "") == "Unknown"
 
 
 class TestNormalizeFrameType:
@@ -114,3 +137,13 @@ class TestGetFitsMetadata:
         path = make_fits("no_headers.fits", {})
         meta = get_fits_metadata(path)
         assert meta["binning"] == "Unknown"
+
+    def test_optical_train_derived_from_headers(self, make_fits):
+        path = make_fits("light_001.fits", {"TELESCOP": "Celestron NexStar 8SE", "INSTRUME": "ZWO ASI294MC Pro", "FOCALLEN": 1200})
+        meta = get_fits_metadata(path)
+        assert meta["optical_train"] == "Celestron NexStar 8SE | ZWO ASI294MC Pro | 1200mm"
+
+    def test_optical_train_unknown_when_all_headers_missing(self, make_fits):
+        path = make_fits("no_headers.fits", {})
+        meta = get_fits_metadata(path)
+        assert meta["optical_train"] == "Unknown"

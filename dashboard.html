@@ -534,6 +534,12 @@
                         </select>
                     </div>
                     <div class="filter-item">
+                        <label>Optical Train</label>
+                        <select id="filterOpticalTrain">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
                         <label>Min Subframes per Target</label>
                         <input type="number" id="filterMinCount" placeholder="e.g. 100" min="0">
                     </div>
@@ -997,6 +1003,7 @@
             const instruments = [...new Set(dataSource.map(d => d.instrument))].filter(Boolean).sort();
             const resolutions = [...new Set(dataSource.map(d => d.resolution))].filter(Boolean).sort();
             const binnings = [...new Set(dataSource.map(d => d.binning))].filter(Boolean).sort();
+            const opticalTrains = [...new Set(dataSource.map(d => d.optical_train))].filter(Boolean).sort();
 
             populateSelect('filterCategory', categories);
             populateSelect('filterFrameType', frameTypes);
@@ -1006,6 +1013,7 @@
             populateSelect('filterInstrument', instruments);
             populateSelect('filterResolution', resolutions);
             populateSelect('filterBinning', binnings);
+            populateSelect('filterOpticalTrain', opticalTrains);
         }
 
         function populateSelect(id, options) {
@@ -1408,6 +1416,7 @@
             const instrument = document.getElementById('filterInstrument').value;
             const resolution = document.getElementById('filterResolution').value;
             const binning = document.getElementById('filterBinning').value;
+            const opticalTrain = document.getElementById('filterOpticalTrain').value;
             const search = document.getElementById('filterSearch').value.toLowerCase();
             const minCount = parseInt(document.getElementById('filterMinCount').value) || 0;
 
@@ -1436,6 +1445,7 @@
                 if (instrument && row.instrument !== instrument) return false;
                 if (resolution && row.resolution !== resolution) return false;
                 if (binning && row.binning !== binning) return false;
+                if (opticalTrain && row.optical_train !== opticalTrain) return false;
                 if (search && !row.file_name.toLowerCase().includes(search)) return false;
 
                 // Apply minimum subframe count filter
@@ -1460,6 +1470,7 @@
             document.getElementById('filterInstrument').value = '';
             document.getElementById('filterResolution').value = '';
             document.getElementById('filterBinning').value = '';
+            document.getElementById('filterOpticalTrain').value = '';
             document.getElementById('filterSearch').value = '';
             document.getElementById('filterMinCount').value = '';
             document.getElementById('tableSearch').value = '';
@@ -1502,6 +1513,7 @@
             document.getElementById('filterInstrument').addEventListener('change', applyFilters);
             document.getElementById('filterResolution').addEventListener('change', applyFilters);
             document.getElementById('filterBinning').addEventListener('change', applyFilters);
+            document.getElementById('filterOpticalTrain').addEventListener('change', applyFilters);
             document.getElementById('filterSearch').addEventListener('input', applyFilters);
             document.getElementById('filterMinCount').addEventListener('input', applyFilters);
             document.getElementById('tableSearch').addEventListener('input', function () {

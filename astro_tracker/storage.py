@@ -70,7 +70,8 @@ CREATE TABLE IF NOT EXISTS session_annotations (
 
 FILE_COLUMNS = (
     "file_name", "folder", "location", "file_category", "target", "date", "frame_type",
-    "exposure", "gain", "temp", "filter", "instrument", "resolution", "binning", "ra", "dec",
+    "exposure", "gain", "temp", "filter", "instrument", "resolution", "binning",
+    "optical_train", "ra", "dec",
 )
 
 
@@ -93,6 +94,7 @@ def init_schema(conn):
         "ALTER TABLE files ADD COLUMN location TEXT",
         "ALTER TABLE files ADD COLUMN resolution TEXT",
         "ALTER TABLE files ADD COLUMN binning TEXT",
+        "ALTER TABLE files ADD COLUMN optical_train TEXT",
     ):
         try:
             conn.execute(ddl)
