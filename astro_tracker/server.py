@@ -242,9 +242,9 @@ def export_target_group_to_siril(group_id: int, body: SirilExportRequest):
         conn.close()
 
     if not files:
-        raise HTTPException(status_code=404, detail=f"Target group {group_id} has no files")
+        raise HTTPException(status_code=404, detail=f"Target group {group_id} has no Light frames")
 
-    return siril_export.build_working_folder(files, body.destination, group_id)
+    return siril_export.build_lights_export(files, body.destination, group_id)
 
 
 def main():
