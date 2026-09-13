@@ -56,7 +56,33 @@ Then open `http://127.0.0.1:8000`:
 
 ## FITS Header Analyzer & Dictionary Suite
 
-### 1. Header Analyzer (`fits_header_analyzer.py`)
+### 1. FITS Studio Web Application Suite (`/studio`)
+
+The FITS Studio web suite (`fits_studio.html`) provides an interactive 3-tab application accessible via `http://127.0.0.1:8000/studio` or `python3 fits_dictionary_cli.py --studio`:
+
+- **⚡ Tab 1: Scan & Runner**:
+  - **Dual Folder Pickers**:
+    - **`📁 Browse OS Folder...`**: Triggers native macOS folder picker dialogs via `/api/browse-folder` (AppleScript).
+    - **`📂 Select Folder...`**: Browser-native directory selection via HTML5 `<input type="file" webkitdirectory>`.
+    - **Quick Path Presets**: One-click shortcuts for `📁 AP Images` (`/Users/yvinu/Documents/AP`), `📁 FITS Workspace` (`/Users/yvinu/Automation/FITS_Report`), and `📁 External Drives` (`/Volumes/`).
+  - **Live Scanner Progress Bar & Completion Banner**:
+    - Animated progress bar (`0.0%` to `100.0%`) updating live every 400ms.
+    - Live file counter (`processed / total files`), elapsed timer (`⏱️ MM:SS`), status badges (`⚡ RUNNING ANALYSIS`, `✅ COMPLETE`, `❌ FAILED`), and live file name indicator (`File: IMG_0042.fits`).
+    - Emerald green completion notification banner detailing scanned file count and elapsed execution seconds.
+    - Automatic dashboard metrics refresh (Total Image Files, Processed FITS, Field Signatures, Publishers Detected) and dynamic rendering of **Top Header Combination Signatures**.
+  - **Standalone & File Protocol Support**: Works seamlessly whether accessed via HTTP or opened directly as a static file (`file:///...`), automatically resolving API requests to `http://127.0.0.1:8000`.
+
+- **📖 Tab 2: Interactive Dictionary**:
+  - Searchable mapping interface connecting canonical astronomical concepts (`exposure`, `gain`, `sensor_temp`, `target_name`, `frame_type`, `instrument`, etc.) to specific header cards (`EXPTIME`, `DET-TEMP`, `EGAIN`, `IMAGETYP`).
+  - Publisher badges showing origin software writing each card variation (`ZWO ASIAIR`, `DWARFLAB`, `Seestar S50`, `N.I.N.A.`, `Siril`, `PixInsight`).
+
+- **🌌 Tab 3: Graph Explorer**:
+  - Interactive 2D property graph visualizer powered by `vis-network.js`.
+  - Color-coded node rendering for Canonical Concepts (Purple), Header Cards (Cyan), and Software Publishers (Green) linked by `MAPS_TO` and `WRITTEN_BY` edges.
+
+---
+
+### 2. Header Analyzer Engine (`fits_header_analyzer.py`)
 
 Scans FITS collections to answer 5 key metadata questions across drives without mutating original files:
 1. **Most common field sets**: Primary header combinations present across files.
@@ -70,7 +96,9 @@ Scans FITS collections to answer 5 key metadata questions across drives without 
 python3 fits_header_analyzer.py -d /path/to/fits/folder --min-combo-pct 1.0
 ```
 
-### 2. KùzuDB Property Graph & Dictionary CLI (`fits_dictionary_cli.py`)
+---
+
+### 3. KùzuDB Property Graph & Dictionary CLI (`fits_dictionary_cli.py`)
 
 Integrates metadata into a cumulative property graph database (`astro_fits_graph.kuzu_db`) connecting `CanonicalConcept`, `HeaderCard`, and `SoftwarePublisher` nodes via `MAPS_TO` and `WRITTEN_BY` relationships.
 
@@ -159,6 +187,11 @@ All endpoints are served locally by `astro_tracker.server`, no auth:
 
 | Endpoint | Description |
 |----------|-------------|
+| `GET /studio` | Serves FITS Studio 3-Tab Web Application Suite (`fits_studio.html`). |
+| `GET /api/fits-dictionary` | Returns standard astronomical card mapping dictionary JSON. |
+| `POST /api/header-analysis/start` | Starts background header analysis job across FITS collections. |
+| `GET /api/header-analysis/status` | Polls live progress percentages, file counters, elapsed timer, and header signature results. |
+| `POST /api/corpus/reset` | Resets cumulative KùzuDB property graph database and dictionary corpus to clean seed state. |
 | `GET /api/files` | Every file record (the raw, non-deduplicated table). |
 | `GET /api/stats` | Library-wide summary stats (category/frame-type/filter breakdowns, total exposure, unique targets) — each duplicate group counts once. |
 | `GET /api/target-groups` | RA/DEC-clustered target groups, with integration time and mean midpoint (deduplicated). |
