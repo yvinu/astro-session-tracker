@@ -4,6 +4,9 @@ fits_analysis_errors.log
 *.db
 *.sqlite
 *.sqlite3
+*.kuzu_db
+*.kuzu_db*
+*.wal
 
 # Python
 __pycache__/

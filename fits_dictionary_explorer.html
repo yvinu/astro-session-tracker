@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FITS Header Metadata Dictionary</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 27, 38, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #7c3aed;
+            --accent-secondary: #06b6d4;
+            --accent-green: #10b981;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-badge {
+            background: linear-gradient(135deg, #7c3aed, #06b6d4);
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .search-bar {
+            position: relative;
+            width: 380px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 10px 16px 10px 40px;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-bar input:focus {
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 40px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 30px;
+            flex: 1;
+        }
+
+        .sidebar {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .sidebar h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 24px;
+        }
+
+        .nav-item {
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            background: rgba(124, 58, 237, 0.15);
+            color: #a78bfa;
+            border: 1px solid rgba(124, 58, 237, 0.3);
+        }
+
+        .publisher-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .pub-badge {
+            font-size: 13px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .pub-badge:hover, .pub-badge.active {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent-secondary);
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 14px 20px;
+            border-radius: 12px;
+            flex: 1;
+        }
+
+        .stat-card .val {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stat-card .lbl {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .concept-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .concept-card:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .concept-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .concept-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .concept-key {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            background: rgba(124, 58, 237, 0.2);
+            color: #c4b5fd;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(124, 58, 237, 0.3);
+        }
+
+        .type-tag {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .synonyms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 14px;
+        }
+
+        .synonym-item {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .synonym-card-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--accent-secondary);
+            margin-bottom: 6px;
+        }
+
+        .synonym-notes {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .publishers-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .publisher-chip {
+            font-size: 11px;
+            font-weight: 500;
+            background: rgba(16, 185, 129, 0.15);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-area">
+            <span class="logo-badge">FITS DICTIONARY</span>
+            <h1>Header Metadata & Publisher Index</h1>
+        </div>
+        <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Search card (DET-TEMP), concept, software..." oninput="filterData()">
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="sidebar">
+            <h3>View Mode</h3>
+            <div class="nav-tabs">
+                <div class="nav-item active" id="tabConcepts" onclick="switchTab('concepts')">
+                    Canonical Concepts
+                    <span>14</span>
+                </div>
+                <div class="nav-item" id="tabPublishers" onclick="switchTab('publishers')">
+                    Publishers / Software
+                    <span>27</span>
+                </div>
+            </div>
+
+            <h3>Filter Publisher</h3>
+            <div class="publisher-list" id="publisherList">
+                <div class="pub-badge active" onclick="filterByPublisher('ALL')">All Publishers</div>
+                <div class="pub-badge" onclick="filterByPublisher('ASIAIR (hyphenated variant)')">ASIAIR (hyphenated variant)</div><div class="pub-badge" onclick="filterByPublisher('ASTAP')">ASTAP</div><div class="pub-badge" onclick="filterByPublisher('Astro Pixel Processor')">Astro Pixel Processor</div><div class="pub-badge" onclick="filterByPublisher('Astrometry.net')">Astrometry.net</div><div class="pub-badge" onclick="filterByPublisher('Canon')">Canon</div><div class="pub-badge" onclick="filterByPublisher('DSLR Cameras')">DSLR Cameras</div><div class="pub-badge" onclick="filterByPublisher('DWARFLAB')">DWARFLAB</div><div class="pub-badge" onclick="filterByPublisher('EKOS')">EKOS</div><div class="pub-badge" onclick="filterByPublisher('Generic Hardware')">Generic Hardware</div><div class="pub-badge" onclick="filterByPublisher('Generic Software')">Generic Software</div><div class="pub-badge" onclick="filterByPublisher('KStars')">KStars</div><div class="pub-badge" onclick="filterByPublisher('Legacy Software')">Legacy Software</div><div class="pub-badge" onclick="filterByPublisher('MaxIm DL')">MaxIm DL</div><div class="pub-badge" onclick="filterByPublisher('Maxim DL')">Maxim DL</div><div class="pub-badge" onclick="filterByPublisher('N.I.N.A.')">N.I.N.A.</div><div class="pub-badge" onclick="filterByPublisher('Nikon')">Nikon</div><div class="pub-badge" onclick="filterByPublisher('Observatories')">Observatories</div><div class="pub-badge" onclick="filterByPublisher('PixInsight')">PixInsight</div><div class="pub-badge" onclick="filterByPublisher('Professional Observatories')">Professional Observatories</div><div class="pub-badge" onclick="filterByPublisher('SGP')">SGP</div><div class="pub-badge" onclick="filterByPublisher('Seestar S50')">Seestar S50</div><div class="pub-badge" onclick="filterByPublisher('SharpCap')">SharpCap</div><div class="pub-badge" onclick="filterByPublisher('Siril')">Siril</div><div class="pub-badge" onclick="filterByPublisher('Voyager')">Voyager</div><div class="pub-badge" onclick="filterByPublisher('WCS Solvers')">WCS Solvers</div><div class="pub-badge" onclick="filterByPublisher('XISF')">XISF</div><div class="pub-badge" onclick="filterByPublisher('ZWO ASIAIR')">ZWO ASIAIR</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="val">14</div>
+                    <div class="lbl">Canonical Concepts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="val">41</div>
+                    <div class="lbl">FITS Card Variations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="val">27</div>
+                    <div class="lbl">Associated Publishers</div>
+                </div>
+            </div>
+
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const dictionaryData = {"exposure": {"display_name": "Exposure Time (s)", "data_type": "float", "default": 0.0, "synonyms": [{"card": "EXPTIME", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril", "SharpCap", "DWARFLAB"], "notes": "Standard FITS exposure duration in seconds"}, {"card": "EXPOSURE", "publishers": ["MaxIm DL", "Astro Pixel Processor", "PixInsight"], "notes": "Alternate exposure keyword"}]}, "gain": {"display_name": "Gain / Sensitivity", "data_type": "str", "default": "N/A", "synonyms": [{"card": "GAIN", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "DWARFLAB", "Seestar S50", "SharpCap"], "notes": "Camera sensor digital/analog gain"}, {"card": "ISO", "publishers": ["DSLR Cameras", "Canon", "Nikon"], "notes": "DSLR ISO sensitivity rating"}, {"card": "EGAIN", "publishers": ["ZWO ASIAIR", "Siril"], "notes": "Electrons per ADU gain factor"}, {"card": "CCDGAIN", "publishers": ["MaxIm DL"], "notes": "CCD gain setting"}]}, "sensor_temp": {"display_name": "Sensor Temperature (\u00b0C)", "data_type": "float", "default": "N/A", "synonyms": [{"card": "CCD-TEMP", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril", "SharpCap"], "notes": "Actual measured CCD/CMOS sensor temperature"}, {"card": "DET-TEMP", "publishers": ["DWARFLAB"], "notes": "Detector temperature card written by DWARF hardware"}, {"card": "TEMP", "publishers": ["Generic Hardware"], "notes": "Unspecified temperature header"}]}, "target_temp": {"display_name": "Target Setpoint Temp (\u00b0C)", "data_type": "float", "default": "N/A", "synonyms": [{"card": "SET-TEMP", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "MaxIm DL", "SGP"], "notes": "Target cooling temperature setpoint"}]}, "target_name": {"display_name": "Target Object Name", "data_type": "str", "default": "Unknown", "synonyms": [{"card": "OBJECT", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "DWARFLAB", "Siril", "PixInsight"], "notes": "Astronomical target name string"}, {"card": "OBJCT", "publishers": ["Legacy Software"], "notes": "Abbreviated target keyword"}, {"card": "TARGET", "publishers": ["KStars", "EKOS"], "notes": "Target object identifier"}]}, "frame_type": {"display_name": "Frame Type", "data_type": "str", "default": "Unknown", "transform": "normalize_frame_type", "synonyms": [{"card": "IMAGETYP", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "SharpCap", "PixInsight"], "notes": "Frame classification (Light, Dark, Flat, Bias)"}, {"card": "FRAME", "publishers": ["DWARFLAB", "Siril"], "notes": "Frame type keyword used by DWARFLAB and Siril"}, {"card": "FRAMETYPE", "publishers": ["XISF", "PixInsight"], "notes": "XISF frame type property"}]}, "instrument": {"display_name": "Camera / Instrument Model", "data_type": "str", "default": null, "synonyms": [{"card": "INSTRUME", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril", "PixInsight"], "notes": "Primary instrument name"}, {"card": "CAMERA", "publishers": ["DWARFLAB"], "notes": "Camera model keyword written by DWARFLAB"}, {"card": "CAMNAME", "publishers": ["DWARFLAB"], "notes": "Secondary camera name card written by DWARF"}, {"card": "DETECTOR", "publishers": ["Professional Observatories"], "notes": "Detector model header"}]}, "telescope": {"display_name": "Telescope / Optics Model", "data_type": "str", "default": null, "synonyms": [{"card": "TELESCOP", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril"], "notes": "Telescope description"}, {"card": "TELESCOPE", "publishers": ["KStars", "EKOS"], "notes": "Full telescope keyword"}, {"card": "SCOPE", "publishers": ["SharpCap"], "notes": "Abbreviated scope header"}]}, "filter_name": {"display_name": "Filter Name", "data_type": "str", "default": "No Filter", "synonyms": [{"card": "FILTER", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril", "DWARFLAB"], "notes": "Active optical filter name"}, {"card": "FILT", "publishers": ["Legacy Software"], "notes": "Abbreviated filter card"}]}, "ra": {"display_name": "Right Ascension", "data_type": "str", "default": null, "synonyms": [{"card": "RA", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "DWARFLAB", "Seestar S50", "Siril"], "notes": "Right ascension coordinate string or degrees"}, {"card": "OBJCTRA", "publishers": ["Maxim DL", "SGP"], "notes": "Object RA coordinate header"}, {"card": "CRVAL1", "publishers": ["WCS Solvers", "ASTAP", "Astrometry.net"], "notes": "WCS center RA coordinate"}]}, "dec": {"display_name": "Declination", "data_type": "str", "default": null, "synonyms": [{"card": "DEC", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "DWARFLAB", "Seestar S50", "Siril"], "notes": "Declination coordinate string or degrees"}, {"card": "OBJCTDEC", "publishers": ["Maxim DL", "SGP"], "notes": "Object DEC coordinate header"}, {"card": "CRVAL2", "publishers": ["WCS Solvers", "ASTAP", "Astrometry.net"], "notes": "WCS center DEC coordinate"}]}, "bayer_pattern": {"display_name": "Bayer Color Matrix", "data_type": "str", "default": "N/A", "synonyms": [{"card": "BAYERPAT", "publishers": ["ZWO ASIAIR", "N.I.N.A.", "Seestar S50", "DWARFLAB", "Siril"], "notes": "Bayer pattern (RGGB, BGGR, GBRG, GRBG)"}, {"card": "Bayer-Pattern", "publishers": ["ASIAIR (hyphenated variant)"], "notes": "Hyphenated Bayer pattern card"}, {"card": "COLORTYP", "publishers": ["Legacy Software"], "notes": "Color matrix type card"}]}, "binning": {"display_name": "Sensor Binning", "data_type": "str", "default": "1x1", "synonyms": [{"card": "XBINNING", "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "DWARFLAB", "Siril"], "notes": "Horizontal hardware binning factor"}, {"card": "CCDXBIN", "publishers": ["DWARFLAB", "Seestar S50"], "notes": "CCD X binning factor"}]}, "software_creator": {"display_name": "Writing Software / Publisher", "data_type": "str", "default": "Unknown", "synonyms": [{"card": "SWCREATE", "publishers": ["N.I.N.A.", "Siril", "Voyager", "KStars"], "notes": "Software creation card"}, {"card": "CREATOR", "publishers": ["PixInsight", "Seestar S50", "Astro Pixel Processor"], "notes": "File creator software name and version"}, {"card": "PROGRAM", "publishers": ["DWARFLAB", "SharpCap"], "notes": "Acquisition program name"}, {"card": "SOFTWARE", "publishers": ["Generic Software"], "notes": "Generic software card"}, {"card": "ORIGIN", "publishers": ["DWARFLAB", "Observatories"], "notes": "Origin institution or software"}]}};
+        const publisherData = {"N.I.N.A.": [{"card": "EXPTIME", "concept": "exposure", "display_name": "Exposure Time (s)", "notes": "Standard FITS exposure duration in seconds"}, {"card": "GAIN", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "Camera sensor digital/analog gain"}, {"card": "CCD-TEMP", "concept": "sensor_temp", "display_name": "Sensor Temperature (\u00b0C)", "notes": "Actual measured CCD/CMOS sensor temperature"}, {"card": "SET-TEMP", "concept": "target_temp", "display_name": "Target Setpoint Temp (\u00b0C)", "notes": "Target cooling temperature setpoint"}, {"card": "OBJECT", "concept": "target_name", "display_name": "Target Object Name", "notes": "Astronomical target name string"}, {"card": "IMAGETYP", "concept": "frame_type", "display_name": "Frame Type", "notes": "Frame classification (Light, Dark, Flat, Bias)"}, {"card": "INSTRUME", "concept": "instrument", "display_name": "Camera / Instrument Model", "notes": "Primary instrument name"}, {"card": "TELESCOP", "concept": "telescope", "display_name": "Telescope / Optics Model", "notes": "Telescope description"}, {"card": "FILTER", "concept": "filter_name", "display_name": "Filter Name", "notes": "Active optical filter name"}, {"card": "RA", "concept": "ra", "display_name": "Right Ascension", "notes": "Right ascension coordinate string or degrees"}, {"card": "DEC", "concept": "dec", "display_name": "Declination", "notes": "Declination coordinate string or degrees"}, {"card": "BAYERPAT", "concept": "bayer_pattern", "display_name": "Bayer Color Matrix", "notes": "Bayer pattern (RGGB, BGGR, GBRG, GRBG)"}, {"card": "XBINNING", "concept": "binning", "display_name": "Sensor Binning", "notes": "Horizontal hardware binning factor"}, {"card": "SWCREATE", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "Software creation card"}], "ZWO ASIAIR": [{"card": "EXPTIME", "concept": "exposure", "display_name": "Exposure Time (s)", "notes": "Standard FITS exposure duration in seconds"}, {"card": "GAIN", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "Camera sensor digital/analog gain"}, {"card": "EGAIN", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "Electrons per ADU gain factor"}, {"card": "CCD-TEMP", "concept": "sensor_temp", "display_name": "Sensor Temperature (\u00b0C)", "notes": "Actual measured CCD/CMOS sensor temperature"}, {"card": "SET-TEMP", "concept": "target_temp", "display_name": "Target Setpoint Temp (\u00b0C)", "notes": "Target cooling temperature setpoint"}, {"card": "OBJECT", "concept": "target_name", "display_name": "Target Object Name", "notes": "Astronomical target name string"}, {"card": "IMAGETYP", "concept": "frame_type", "display_name": "Frame Type", "notes": "Frame classification (Light, Dark, Flat, Bias)"}, {"card": "INSTRUME", "concept": "instrument", "display_name": "Camera / Instrument Model", "notes": "Primary instrument name"}, {"card": "TELESCOP", "concept": "telescope", "display_name": "Telescope / Optics Model", "notes": "Telescope description"}, {"card": "FILTER", "concept": "filter_name", "display_name": "Filter Name", "notes": "Active optical filter name"}, {"card": "RA", "concept": "ra", "display_name": "Right Ascension", "notes": "Right ascension coordinate string or degrees"}, {"card": "DEC", "concept": "dec", "display_name": "Declination", "notes": "Declination coordinate string or degrees"}, {"card": "BAYERPAT", "concept": "bayer_pattern", "display_name": "Bayer Color Matrix", "notes": "Bayer pattern (RGGB, BGGR, GBRG, GRBG)"}, {"card": "XBINNING", "concept": "binning", "display_name": "Sensor Binning", "notes": "Horizontal hardware binning factor"}], "Seestar S50": [{"card": "EXPTIME", "concept": "exposure", "display_name": "Exposure Time (s)", "notes": "Standard FITS exposure duration in seconds"}, {"card": "GAIN", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "Camera sensor digital/analog gain"}, {"card": "CCD-TEMP", "concept": "sensor_temp", "display_name": "Sensor Temperature (\u00b0C)", "notes": "Actual measured CCD/CMOS sensor temperature"}, {"card": "OBJECT", "concept": "target_name", "display_name": "Target Object Name", "notes": "Astronomical target name string"}, {"card": "IMAGETYP", "concept": "frame_type", "display_name": "Frame Type", "notes": "Frame classification (Light, Dark, Flat, Bias)"}, {"card": "INSTRUME", "concept": "instrument", "display_name": "Camera / Instrument Model", "notes": "Primary instrument name"}, {"card": "TELESCOP", "concept": "telescope", "display_name": "Telescope / Optics Model", "notes": "Telescope description"}, {"card": "FILTER", "concept": "filter_name", "display_name": "Filter Name", "notes": "Active optical filter name"}, {"card": "RA", "concept": "ra", "display_name": "Right Ascension", "notes": "Right ascension coordinate string or degrees"}, {"card": "DEC", "concept": "dec", "display_name": "Declination", "notes": "Declination coordinate string or degrees"}, {"card": "BAYERPAT", "concept": "bayer_pattern", "display_name": "Bayer Color Matrix", "notes": "Bayer pattern (RGGB, BGGR, GBRG, GRBG)"}, {"card": "XBINNING", "concept": "binning", "display_name": "Sensor Binning", "notes": "Horizontal hardware binning factor"}, {"card": "CCDXBIN", "concept": "binning", "display_name": "Sensor Binning", "notes": "CCD X binning factor"}, {"card": "CREATOR", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "File creator software name and version"}], "Siril": [{"card": "EXPTIME", "concept": "exposure", "display_name": "Exposure Time (s)", "notes": "Standard FITS exposure duration in seconds"}, {"card": "EGAIN", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "Electrons per ADU gain factor"}, {"card": "CCD-TEMP", "concept": "sensor_temp", "display_name": "Sensor Temperature (\u00b0C)", "notes": "Actual measured CCD/CMOS sensor temperature"}, {"card": "OBJECT", "concept": "target_name", "display_name": "Target Object Name", "notes": "Astronomical target name string"}, {"card": "FRAME", "concept": "frame_type", "display_name": "Frame Type", "notes": "Frame type keyword used by DWARFLAB and Siril"}, {"card": "INSTRUME", "concept": "instrument", "display_name": "Camera / Instrument Model", "notes": "Primary instrument name"}, {"card": "TELESCOP", "concept": "telescope", "display_name": "Telescope / Optics Model", "notes": "Telescope description"}, {"card": "FILTER", "concept": "filter_name", "display_name": "Filter Name", "notes": "Active optical filter name"}, {"card": "RA", "concept": "ra", "display_name": "Right Ascension", "notes": "Right ascension coordinate string or degrees"}, {"card": "DEC", "concept": "dec", "display_name": "Declination", "notes": "Declination coordinate string or degrees"}, {"card": "BAYERPAT", "concept": "bayer_pattern", "display_name": "Bayer Color Matrix", "notes": "Bayer pattern (RGGB, BGGR, GBRG, GRBG)"}, {"card": "XBINNING", "concept": "binning", "display_name": "Sensor Binning", "notes": "Horizontal hardware binning factor"}, {"card": "SWCREATE", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "Software creation card"}], "SharpCap": [{"card": "EXPTIME", "concept": "exposure", "display_name": "Exposure Time (s)", "notes": "Standard FITS exposure duration in seconds"}, {"card": "GAIN", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "Camera sensor digital/analog gain"}, {"card": "CCD-TEMP", "concept": "sensor_temp", "display_name": "Sensor Temperature (\u00b0C)", "notes": "Actual measured CCD/CMOS sensor temperature"}, {"card": "IMAGETYP", "concept": "frame_type", "display_name": "Frame Type", "notes": "Frame classification (Light, Dark, Flat, Bias)"}, {"card": "SCOPE", "concept": "telescope", "display_name": "Telescope / Optics Model", "notes": "Abbreviated scope header"}, {"card": "PROGRAM", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "Acquisition program name"}], "DWARFLAB": [{"card": "EXPTIME", "concept": "exposure", "display_name": "Exposure Time (s)", "notes": "Standard FITS exposure duration in seconds"}, {"card": "GAIN", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "Camera sensor digital/analog gain"}, {"card": "DET-TEMP", "concept": "sensor_temp", "display_name": "Sensor Temperature (\u00b0C)", "notes": "Detector temperature card written by DWARF hardware"}, {"card": "OBJECT", "concept": "target_name", "display_name": "Target Object Name", "notes": "Astronomical target name string"}, {"card": "FRAME", "concept": "frame_type", "display_name": "Frame Type", "notes": "Frame type keyword used by DWARFLAB and Siril"}, {"card": "CAMERA", "concept": "instrument", "display_name": "Camera / Instrument Model", "notes": "Camera model keyword written by DWARFLAB"}, {"card": "CAMNAME", "concept": "instrument", "display_name": "Camera / Instrument Model", "notes": "Secondary camera name card written by DWARF"}, {"card": "FILTER", "concept": "filter_name", "display_name": "Filter Name", "notes": "Active optical filter name"}, {"card": "RA", "concept": "ra", "display_name": "Right Ascension", "notes": "Right ascension coordinate string or degrees"}, {"card": "DEC", "concept": "dec", "display_name": "Declination", "notes": "Declination coordinate string or degrees"}, {"card": "BAYERPAT", "concept": "bayer_pattern", "display_name": "Bayer Color Matrix", "notes": "Bayer pattern (RGGB, BGGR, GBRG, GRBG)"}, {"card": "XBINNING", "concept": "binning", "display_name": "Sensor Binning", "notes": "Horizontal hardware binning factor"}, {"card": "CCDXBIN", "concept": "binning", "display_name": "Sensor Binning", "notes": "CCD X binning factor"}, {"card": "PROGRAM", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "Acquisition program name"}, {"card": "ORIGIN", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "Origin institution or software"}], "MaxIm DL": [{"card": "EXPOSURE", "concept": "exposure", "display_name": "Exposure Time (s)", "notes": "Alternate exposure keyword"}, {"card": "CCDGAIN", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "CCD gain setting"}, {"card": "SET-TEMP", "concept": "target_temp", "display_name": "Target Setpoint Temp (\u00b0C)", "notes": "Target cooling temperature setpoint"}], "Astro Pixel Processor": [{"card": "EXPOSURE", "concept": "exposure", "display_name": "Exposure Time (s)", "notes": "Alternate exposure keyword"}, {"card": "CREATOR", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "File creator software name and version"}], "PixInsight": [{"card": "EXPOSURE", "concept": "exposure", "display_name": "Exposure Time (s)", "notes": "Alternate exposure keyword"}, {"card": "OBJECT", "concept": "target_name", "display_name": "Target Object Name", "notes": "Astronomical target name string"}, {"card": "IMAGETYP", "concept": "frame_type", "display_name": "Frame Type", "notes": "Frame classification (Light, Dark, Flat, Bias)"}, {"card": "FRAMETYPE", "concept": "frame_type", "display_name": "Frame Type", "notes": "XISF frame type property"}, {"card": "INSTRUME", "concept": "instrument", "display_name": "Camera / Instrument Model", "notes": "Primary instrument name"}, {"card": "CREATOR", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "File creator software name and version"}], "DSLR Cameras": [{"card": "ISO", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "DSLR ISO sensitivity rating"}], "Canon": [{"card": "ISO", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "DSLR ISO sensitivity rating"}], "Nikon": [{"card": "ISO", "concept": "gain", "display_name": "Gain / Sensitivity", "notes": "DSLR ISO sensitivity rating"}], "Generic Hardware": [{"card": "TEMP", "concept": "sensor_temp", "display_name": "Sensor Temperature (\u00b0C)", "notes": "Unspecified temperature header"}], "SGP": [{"card": "SET-TEMP", "concept": "target_temp", "display_name": "Target Setpoint Temp (\u00b0C)", "notes": "Target cooling temperature setpoint"}, {"card": "OBJCTRA", "concept": "ra", "display_name": "Right Ascension", "notes": "Object RA coordinate header"}, {"card": "OBJCTDEC", "concept": "dec", "display_name": "Declination", "notes": "Object DEC coordinate header"}], "Legacy Software": [{"card": "OBJCT", "concept": "target_name", "display_name": "Target Object Name", "notes": "Abbreviated target keyword"}, {"card": "FILT", "concept": "filter_name", "display_name": "Filter Name", "notes": "Abbreviated filter card"}, {"card": "COLORTYP", "concept": "bayer_pattern", "display_name": "Bayer Color Matrix", "notes": "Color matrix type card"}], "KStars": [{"card": "TARGET", "concept": "target_name", "display_name": "Target Object Name", "notes": "Target object identifier"}, {"card": "TELESCOPE", "concept": "telescope", "display_name": "Telescope / Optics Model", "notes": "Full telescope keyword"}, {"card": "SWCREATE", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "Software creation card"}], "EKOS": [{"card": "TARGET", "concept": "target_name", "display_name": "Target Object Name", "notes": "Target object identifier"}, {"card": "TELESCOPE", "concept": "telescope", "display_name": "Telescope / Optics Model", "notes": "Full telescope keyword"}], "XISF": [{"card": "FRAMETYPE", "concept": "frame_type", "display_name": "Frame Type", "notes": "XISF frame type property"}], "Professional Observatories": [{"card": "DETECTOR", "concept": "instrument", "display_name": "Camera / Instrument Model", "notes": "Detector model header"}], "Maxim DL": [{"card": "OBJCTRA", "concept": "ra", "display_name": "Right Ascension", "notes": "Object RA coordinate header"}, {"card": "OBJCTDEC", "concept": "dec", "display_name": "Declination", "notes": "Object DEC coordinate header"}], "WCS Solvers": [{"card": "CRVAL1", "concept": "ra", "display_name": "Right Ascension", "notes": "WCS center RA coordinate"}, {"card": "CRVAL2", "concept": "dec", "display_name": "Declination", "notes": "WCS center DEC coordinate"}], "ASTAP": [{"card": "CRVAL1", "concept": "ra", "display_name": "Right Ascension", "notes": "WCS center RA coordinate"}, {"card": "CRVAL2", "concept": "dec", "display_name": "Declination", "notes": "WCS center DEC coordinate"}], "Astrometry.net": [{"card": "CRVAL1", "concept": "ra", "display_name": "Right Ascension", "notes": "WCS center RA coordinate"}, {"card": "CRVAL2", "concept": "dec", "display_name": "Declination", "notes": "WCS center DEC coordinate"}], "ASIAIR (hyphenated variant)": [{"card": "Bayer-Pattern", "concept": "bayer_pattern", "display_name": "Bayer Color Matrix", "notes": "Hyphenated Bayer pattern card"}], "Voyager": [{"card": "SWCREATE", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "Software creation card"}], "Generic Software": [{"card": "SOFTWARE", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "Generic software card"}], "Observatories": [{"card": "ORIGIN", "concept": "software_creator", "display_name": "Writing Software / Publisher", "notes": "Origin institution or software"}]};
+
+        let currentTab = 'concepts';
+        let currentPublisherFilter = 'ALL';
+
+        function renderConcepts(filterText = '') {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+
+            let count = 0;
+            for (const [key, info] of Object.entries(dictionaryData)) {
+                const dispName = info.display_name || key;
+                const synonyms = info.synonyms || [];
+
+                // Publisher filter
+                if (currentPublisherFilter !== 'ALL') {
+                    const hasPub = synonyms.some(s => (s.publishers || []).includes(currentPublisherFilter));
+                    if (!hasPub) continue;
+                }
+
+                // Text filter
+                if (filterText) {
+                    const matchesKey = key.toLowerCase().includes(filterText);
+                    const matchesDisp = dispName.toLowerCase().includes(filterText);
+                    const matchesCard = synonyms.some(s => s.card.toLowerCase().includes(filterText));
+                    const matchesNotes = synonyms.some(s => (s.notes || '').toLowerCase().includes(filterText));
+                    if (!matchesKey && !matchesDisp && !matchesCard && !matchesNotes) continue;
+                }
+
+                count++;
+                const cardEl = document.createElement('div');
+                cardEl.className = 'concept-card';
+
+                let synHtml = '';
+                synonyms.forEach(syn => {
+                    const pubsHtml = (syn.publishers || []).map(p => `<span class="publisher-chip">${p}</span>`).join('');
+                    synHtml += `
+                        <div class="synonym-item">
+                            <div class="synonym-card-name">${syn.card}</div>
+                            <div class="synonym-notes">${syn.notes || 'Standard header card'}</div>
+                            <div class="publishers-tags">${pubsHtml}</div>
+                        </div>
+                    `;
+                });
+
+                cardEl.innerHTML = `
+                    <div class="concept-header">
+                        <div class="concept-title">
+                            ${dispName}
+                            <span class="concept-key">${key}</span>
+                        </div>
+                        <span class="type-tag">Type: ${info.data_type || 'str'} | Default: ${info.default || 'N/A'}</span>
+                    </div>
+                    <div class="synonyms-grid">${synHtml}</div>
+                `;
+                container.appendChild(cardEl);
+            }
+
+            if (count === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 40px; color: var(--text-muted);">No matching concepts or header cards found.</div>';
+            }
+        }
+
+        function renderPublishers(filterText = '') {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+
+            let count = 0;
+            for (const [pubName, cards] of Object.entries(publisherData)) {
+                if (currentPublisherFilter !== 'ALL' && pubName !== currentPublisherFilter) continue;
+
+                if (filterText) {
+                    const matchesPub = pubName.toLowerCase().includes(filterText);
+                    const matchesCard = cards.some(c => c.card.toLowerCase().includes(filterText) || c.display_name.toLowerCase().includes(filterText));
+                    if (!matchesPub && !matchesCard) continue;
+                }
+
+                count++;
+                const cardEl = document.createElement('div');
+                cardEl.className = 'concept-card';
+
+                let cardsHtml = '';
+                cards.forEach(c => {
+                    cardsHtml += `
+                        <div class="synonym-item">
+                            <div class="synonym-card-name">${c.card}</div>
+                            <div style="font-size: 13px; color: #f3f4f6; margin-bottom: 4px;">${c.display_name} (<code>${c.concept}</code>)</div>
+                            <div class="synonym-notes">${c.notes || ''}</div>
+                        </div>
+                    `;
+                });
+
+                cardEl.innerHTML = `
+                    <div class="concept-header">
+                        <div class="concept-title">
+                            🏢 ${pubName}
+                        </div>
+                        <span class="type-tag">${cards.length} Header Cards</span>
+                    </div>
+                    <div class="synonyms-grid">${cardsHtml}</div>
+                `;
+                container.appendChild(cardEl);
+            }
+
+            if (count === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 40px; color: var(--text-muted);">No matching software publishers found.</div>';
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabConcepts').classList.toggle('active', tab === 'concepts');
+            document.getElementById('tabPublishers').classList.toggle('active', tab === 'publishers');
+            filterData();
+        }
+
+        function filterByPublisher(pub) {
+            currentPublisherFilter = pub;
+            document.querySelectorAll('.pub-badge').forEach(el => {
+                el.classList.toggle('active', el.innerText.trim() === pub || (pub === 'ALL' && el.innerText.includes('All')));
+            });
+            filterData();
+        }
+
+        function filterData() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            if (currentTab === 'concepts') {
+                renderConcepts(query);
+            } else {
+                renderPublishers(query);
+            }
+        }
+
+        // Initial render
+        renderConcepts();
+    </script>
+</body>
+</html>

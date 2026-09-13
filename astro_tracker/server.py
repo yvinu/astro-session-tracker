@@ -21,10 +21,21 @@ from astro_tracker.scanner import DEFAULT_DB_PATH
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASHBOARD_PATH = os.path.join(REPO_ROOT, "dashboard.html")
 SCAN_PAGE_PATH = os.path.join(REPO_ROOT, "scan.html")
+STUDIO_PATH = os.path.join(REPO_ROOT, "fits_studio.html")
+
+from fastapi.middleware.cors import CORSMiddleware
 
 DB_PATH = os.environ.get("ASTRO_TRACKER_DB", DEFAULT_DB_PATH)
 
 app = FastAPI(title="Astro Session Tracker API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_conn():
@@ -39,6 +50,30 @@ def serve_dashboard():
 @app.get("/scan")
 def serve_scan_page():
     return FileResponse(SCAN_PAGE_PATH)
+
+
+@app.get("/studio")
+def serve_studio_page():
+    return FileResponse(STUDIO_PATH)
+
+
+@app.get("/api/fits-dictionary")
+def get_fits_dictionary():
+    dict_path = os.path.join(REPO_ROOT, "astro_tracker", "fits_dictionary.json")
+    if os.path.exists(dict_path):
+        return FileResponse(dict_path, media_type="application/json")
+    raise HTTPException(status_code=404, detail="Dictionary file not found")
+
+
+@app.post("/api/corpus/reset")
+def reset_corpus_api():
+    try:
+        from astro_tracker.fits_graph_db import FITSGraphDB
+        graph_db = FITSGraphDB()
+        graph_db.reset_database()
+        return {"status": "success", "message": "Corpus database and dictionary reset successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/files")
@@ -245,6 +280,74 @@ def export_target_group_to_siril(group_id: int, body: SirilExportRequest):
         raise HTTPException(status_code=404, detail=f"Target group {group_id} has no Light frames")
 
     return siril_export.build_lights_export(files, body.destination, group_id)
+
+
+class HeaderAnalysisRequest(BaseModel):
+    directory: str
+    ignore_symlinks: bool = True
+    min_combo_pct: float = 1.0
+    update_graph: bool = True
+
+
+analysis_job_state = {
+    "status": "idle",
+    "progress_pct": 0.0,
+    "processed": 0,
+    "total": 0,
+    "current_file": "",
+    "results": None,
+    "error": None
+}
+
+
+@app.post("/api/header-analysis/start")
+def start_header_analysis(body: HeaderAnalysisRequest):
+    global analysis_job_state
+    dir_path = os.path.expanduser(body.directory)
+    if not os.path.exists(dir_path):
+        raise HTTPException(status_code=400, detail=f"Directory '{dir_path}' does not exist.")
+
+    if analysis_job_state["status"] == "running":
+        raise HTTPException(status_code=409, detail="An analysis job is already running.")
+
+    analysis_job_state = {
+        "status": "running",
+        "progress_pct": 0.0,
+        "processed": 0,
+        "total": 0,
+        "current_file": "Initializing scan...",
+        "results": None,
+        "error": None
+    }
+
+    def worker():
+        global analysis_job_state
+        try:
+            from fits_header_analyzer import run_analysis
+            def progress_cb(current, total, file_path):
+                analysis_job_state["processed"] = current
+                analysis_job_state["total"] = total
+                analysis_job_state["progress_pct"] = round((current / total) * 100, 1) if total > 0 else 0
+                analysis_job_state["current_file"] = os.path.basename(file_path)
+
+            res = run_analysis(dir_path, ignore_symlinks=body.ignore_symlinks, min_combo_pct=body.min_combo_pct, progress_callback=progress_cb)
+            analysis_job_state["results"] = res
+            analysis_job_state["status"] = "completed"
+            analysis_job_state["progress_pct"] = 100.0
+            analysis_job_state["current_file"] = "Analysis complete!"
+        except Exception as e:
+            analysis_job_state["status"] = "failed"
+            analysis_job_state["error"] = str(e)
+
+    import threading
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+    return {"status": "started", "directory": dir_path}
+
+
+@app.get("/api/header-analysis/status")
+def get_header_analysis_status():
+    return analysis_job_state
 
 
 def main():

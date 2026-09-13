@@ -1,0 +1,3682 @@
+{
+  "scan_directory": "/Users/yvinu/Temp_stacking",
+  "timestamp": "2026-09-13 13:28:40",
+  "total_files": 11368,
+  "symlink_count": 15,
+  "processed_files": 11280,
+  "failed_files": 88,
+  "total_signatures": 75,
+  "min_combo_pct": 1.0,
+  "rare_signature_count": 70,
+  "rare_file_count": 285,
+  "rare_pct": 2.53,
+  "common_field_sets": [
+    {
+      "rank": 1,
+      "field_count": 40,
+      "file_count": 6935,
+      "percentage": 61.48,
+      "fields": [
+        "APTDIA",
+        "BAYERPAT",
+        "BSCALE",
+        "BZERO",
+        "CAMERA",
+        "CAMNAME",
+        "CCD-TEMP",
+        "COMMENT",
+        "DATE",
+        "DATE-OBS",
+        "DEC",
+        "DET-TEMP",
+        "EQMODE",
+        "EXPTIME",
+        "FILTER",
+        "FIRMWARE",
+        "FOCALLEN",
+        "FOCTEMP",
+        "FRAME",
+        "GAIN",
+        "HISTORY",
+        "IMAGETYP",
+        "INSTRUME",
+        "LIVETIME",
+        "MACADDR",
+        "OBJECT",
+        "OFFSET",
+        "ORIGIN",
+        "PROGRAM",
+        "RA",
+        "RESTACK",
+        "ROWORDER",
+        "SCALE",
+        "TELESCOP",
+        "XBAYROFF",
+        "XBINNING",
+        "XPIXSZ",
+        "YBAYROFF",
+        "YBINNING",
+        "YPIXSZ"
+      ]
+    },
+    {
+      "rank": 2,
+      "field_count": 36,
+      "file_count": 1665,
+      "percentage": 14.76,
+      "fields": [
+        "APERTURE",
+        "BAYERPAT",
+        "BSCALE",
+        "BZERO",
+        "CCD-TEMP",
+        "CCDXBIN",
+        "CCDYBIN",
+        "COMMENT",
+        "CREATOR",
+        "DATE-EXP",
+        "DATE-OBS",
+        "DEC",
+        "EQMODE",
+        "EXPOSURE",
+        "EXPTIME",
+        "FILTER",
+        "FOCALLEN",
+        "FOCUSPOS",
+        "GAIN",
+        "IMAGETYP",
+        "INSTRUME",
+        "OBJECT",
+        "PRODUCER",
+        "PROGRAM",
+        "RA",
+        "SITELAT",
+        "SITELONG",
+        "TELESCOP",
+        "TOTALEXP",
+        "WIDECAM",
+        "XBINNING",
+        "XORGSUBF",
+        "XPIXSZ",
+        "YBINNING",
+        "YORGSUBF",
+        "YPIXSZ"
+      ]
+    },
+    {
+      "rank": 3,
+      "field_count": 28,
+      "file_count": 1036,
+      "percentage": 9.18,
+      "fields": [
+        "BAYERPAT",
+        "CALMAX",
+        "CALMIN",
+        "CAMERA",
+        "DATE-OBS",
+        "DEBAYERED",
+        "DEC",
+        "DET-TEMP",
+        "EQMODE",
+        "EXPTIME",
+        "FILTER",
+        "FIRMWARE",
+        "FOCALLEN",
+        "GAIN",
+        "HISTORY",
+        "INSTRUME",
+        "MACADDR",
+        "NAXIS3",
+        "OBJECT",
+        "ORIGIN",
+        "RA",
+        "RESTACK",
+        "SATMASK",
+        "TELESCOP",
+        "XBINNING",
+        "XPIXSZ",
+        "YBINNING",
+        "YPIXSZ"
+      ]
+    },
+    {
+      "rank": 4,
+      "field_count": 26,
+      "file_count": 947,
+      "percentage": 8.4,
+      "fields": [
+        "BAYERPAT",
+        "CALMAX",
+        "CALMIN",
+        "CAMERA",
+        "DATE-OBS",
+        "DEC",
+        "DET-TEMP",
+        "EQMODE",
+        "EXPTIME",
+        "FILTER",
+        "FIRMWARE",
+        "FOCALLEN",
+        "GAIN",
+        "HISTORY",
+        "INSTRUME",
+        "MACADDR",
+        "OBJECT",
+        "ORIGIN",
+        "RA",
+        "RESTACK",
+        "SATMASK",
+        "TELESCOP",
+        "XBINNING",
+        "XPIXSZ",
+        "YBINNING",
+        "YPIXSZ"
+      ]
+    },
+    {
+      "rank": 5,
+      "field_count": 24,
+      "file_count": 412,
+      "percentage": 3.65,
+      "fields": [
+        "BAYERPAT",
+        "BSCALE",
+        "BZERO",
+        "CAMERA",
+        "DATE-OBS",
+        "DEC",
+        "DET-TEMP",
+        "EQMODE",
+        "EXPTIME",
+        "FILTER",
+        "FIRMWARE",
+        "FOCALLEN",
+        "GAIN",
+        "INSTRUME",
+        "MACADDR",
+        "OBJECT",
+        "ORIGIN",
+        "RA",
+        "RESTACK",
+        "TELESCOP",
+        "XBINNING",
+        "XPIXSZ",
+        "YBINNING",
+        "YPIXSZ"
+      ]
+    }
+  ],
+  "unique_combinations": [
+    {
+      "combo_id": "Signature #1",
+      "file_count": 6935,
+      "percentage": 61.48,
+      "field_count": 40,
+      "fields": [
+        "APTDIA",
+        "BAYERPAT",
+        "BSCALE",
+        "BZERO",
+        "CAMERA",
+        "CAMNAME",
+        "CCD-TEMP",
+        "COMMENT",
+        "DATE",
+        "DATE-OBS",
+        "DEC",
+        "DET-TEMP",
+        "EQMODE",
+        "EXPTIME",
+        "FILTER",
+        "FIRMWARE",
+        "FOCALLEN",
+        "FOCTEMP",
+        "FRAME",
+        "GAIN",
+        "HISTORY",
+        "IMAGETYP",
+        "INSTRUME",
+        "LIVETIME",
+        "MACADDR",
+        "OBJECT",
+        "OFFSET",
+        "ORIGIN",
+        "PROGRAM",
+        "RA",
+        "RESTACK",
+        "ROWORDER",
+        "SCALE",
+        "TELESCOP",
+        "XBAYROFF",
+        "XBINNING",
+        "XPIXSZ",
+        "YBAYROFF",
+        "YBINNING",
+        "YPIXSZ"
+      ],
+      "diff_from_primary": {
+        "extra_fields": [],
+        "missing_fields": []
+      },
+      "sample_files": [
+        "C 20(1)_30s60_Duo-Band_20260906-233846154_42C.fits",
+        "C 20(1)_30s60_Duo-Band_20260906-234730089_42C.fits",
+        "C 20(1)_30s60_Duo-Band_20260906-233946104_42C.fits"
+      ]
+    },
+    {
+      "combo_id": "Signature #2",
+      "file_count": 1665,
+      "percentage": 14.76,
+      "field_count": 36,
+      "fields": [
+        "APERTURE",
+        "BAYERPAT",
+        "BSCALE",
+        "BZERO",
+        "CCD-TEMP",
+        "CCDXBIN",
+        "CCDYBIN",
+        "COMMENT",
+        "CREATOR",
+        "DATE-EXP",
+        "DATE-OBS",
+        "DEC",
+        "EQMODE",
+        "EXPOSURE",
+        "EXPTIME",
+        "FILTER",
+        "FOCALLEN",
+        "FOCUSPOS",
+        "GAIN",
+        "IMAGETYP",
+        "INSTRUME",
+        "OBJECT",
+        "PRODUCER",
+        "PROGRAM",
+        "RA",
+        "SITELAT",
+        "SITELONG",
+        "TELESCOP",
+        "TOTALEXP",
+        "WIDECAM",
+        "XBINNING",
+        "XORGSUBF",
+        "XPIXSZ",
+        "YBINNING",
+        "YORGSUBF",
+        "YPIXSZ"
+      ],
+      "diff_from_primary": {
+        "extra_fields": [
+          "APERTURE",
+          "CCDXBIN",
+          "CCDYBIN",
+          "CREATOR",
+          "DATE-EXP",
+          "EXPOSURE",
+          "FOCUSPOS",
+          "PRODUCER",
+          "SITELAT",
+          "SITELONG",
+          "TOTALEXP",
+          "WIDECAM",
+          "XORGSUBF",
+          "YORGSUBF"
+        ],
+        "missing_fields": [
+          "APTDIA",
+          "CAMERA",
+          "CAMNAME",
+          "DATE",
+          "DET-TEMP",
+          "FIRMWARE",
+          "FOCTEMP",
+          "FRAME",
+          "HISTORY",
+          "LIVETIME",
+          "MACADDR",
+          "OFFSET",
+          "ORIGIN",
+          "RESTACK",
+          "ROWORDER",
+          "SCALE",
+          "XBAYROFF",
+          "YBAYROFF"
+        ]
+      },
+      "sample_files": [
+        "Light_mosaic_M 20_10.0s_LP_20260806-222925.fit",
+        "Light_mosaic_M 20_10.0s_LP_20260806-231959.fit",
+        "Light_M 20_10.0s_LP_20260806-011103.fit"
+      ]
+    },
+    {
+      "combo_id": "Signature #3",
+      "file_count": 1036,
+      "percentage": 9.18,
+      "field_count": 28,
+      "fields": [
+        "BAYERPAT",
+        "CALMAX",
+        "CALMIN",
+        "CAMERA",
+        "DATE-OBS",
+        "DEBAYERED",
+        "DEC",
+        "DET-TEMP",
+        "EQMODE",
+        "EXPTIME",
+        "FILTER",
+        "FIRMWARE",
+        "FOCALLEN",
+        "GAIN",
+        "HISTORY",
+        "INSTRUME",
+        "MACADDR",
+        "NAXIS3",
+        "OBJECT",
+        "ORIGIN",
+        "RA",
+        "RESTACK",
+        "SATMASK",
+        "TELESCOP",
+        "XBINNING",
+        "XPIXSZ",
+        "YBINNING",
+        "YPIXSZ"
+      ],
+      "diff_from_primary": {
+        "extra_fields": [
+          "CALMAX",
+          "CALMIN",
+          "DEBAYERED",
+          "NAXIS3",
+          "SATMASK"
+        ],
+        "missing_fields": [
+          "APTDIA",
+          "BSCALE",
+          "BZERO",
+          "CAMNAME",
+          "CCD-TEMP",
+          "COMMENT",
+          "DATE",
+          "FOCTEMP",
+          "FRAME",
+          "IMAGETYP",
+          "LIVETIME",
+          "OFFSET",
+          "PROGRAM",
+          "ROWORDER",
+          "SCALE",
+          "XBAYROFF",
+          "YBAYROFF"
+        ]
+      },
+      "sample_files": [
+        "1daebb_cb625c_IC 1396_15s60_Duo-Band_20260901-011652764_36C_c_n_r.fit",
+        "1daebb_cb625c_IC 1396_15s60_Duo-Band_20260901-004939163_37C_c_n_r.fit",
+        "1daebb_cb625c_IC 1396_15s60_Duo-Band_20260901-005853681_37C_c_n_r.fit"
+      ]
+    },
+    {
+      "combo_id": "Signature #4",
+      "file_count": 947,
+      "percentage": 8.4,
+      "field_count": 26,
+      "fields": [
+        "BAYERPAT",
+        "CALMAX",
+        "CALMIN",
+        "CAMERA",
+        "DATE-OBS",
+        "DEC",
+        "DET-TEMP",
+        "EQMODE",
+        "EXPTIME",
+        "FILTER",
+        "FIRMWARE",
+        "FOCALLEN",
+        "GAIN",
+        "HISTORY",
+        "INSTRUME",
+        "MACADDR",
+        "OBJECT",
+        "ORIGIN",
+        "RA",
+        "RESTACK",
+        "SATMASK",
+        "TELESCOP",
+        "XBINNING",
+        "XPIXSZ",
+        "YBINNING",
+        "YPIXSZ"
+      ],
+      "diff_from_primary": {
+        "extra_fields": [
+          "CALMAX",
+          "CALMIN",
+          "SATMASK"
+        ],
+        "missing_fields": [
+          "APTDIA",
+          "BSCALE",
+          "BZERO",
+          "CAMNAME",
+          "CCD-TEMP",
+          "COMMENT",
+          "DATE",
+          "FOCTEMP",
+          "FRAME",
+          "IMAGETYP",
+          "LIVETIME",
+          "OFFSET",
+          "PROGRAM",
+          "ROWORDER",
+          "SCALE",
+          "XBAYROFF",
+          "YBAYROFF"
+        ]
+      },
+      "sample_files": [
+        "cb625c_IC 1396_15s60_Duo-Band_20260831-215648047_35C_c.fit",
+        "cb625c_IC 1396_15s60_Duo-Band_20260831-220717500_36C_c.fit",
+        "cb625c_IC 1396_15s60_Duo-Band_20260831-212104880_35C_c.fit"
+      ]
+    },
+    {
+      "combo_id": "Signature #5",
+      "file_count": 412,
+      "percentage": 3.65,
+      "field_count": 24,
+      "fields": [
+        "BAYERPAT",
+        "BSCALE",
+        "BZERO",
+        "CAMERA",
+        "DATE-OBS",
+        "DEC",
+        "DET-TEMP",
+        "EQMODE",
+        "EXPTIME",
+        "FILTER",
+        "FIRMWARE",
+        "FOCALLEN",
+        "GAIN",
+        "INSTRUME",
+        "MACADDR",
+        "OBJECT",
+        "ORIGIN",
+        "RA",
+        "RESTACK",
+        "TELESCOP",
+        "XBINNING",
+        "XPIXSZ",
+        "YBINNING",
+        "YPIXSZ"
+      ],
+      "diff_from_primary": {
+        "extra_fields": [],
+        "missing_fields": [
+          "APTDIA",
+          "CAMNAME",
+          "CCD-TEMP",
+          "COMMENT",
+          "DATE",
+          "FOCTEMP",
+          "FRAME",
+          "HISTORY",
+          "IMAGETYP",
+          "LIVETIME",
+          "OFFSET",
+          "PROGRAM",
+          "ROWORDER",
+          "SCALE",
+          "XBAYROFF",
+          "YBAYROFF"
+        ]
+      },
+      "sample_files": [
+        "NGC 6530 9_15s60_Astro_20260813-235336289_40C.fits",
+        "failed_NGC 6530 9_15s60_Astro_20260813-233023546_41C.fits",
+        "NGC 6530 9_15s60_Astro_20260813-222600211_40C.fits"
+      ]
+    }
+  ],
+  "unique_fields_list": [
+    {
+      "field": "APERTURE",
+      "file_count": 1808,
+      "percentage": 16.03,
+      "sample_values": [
+        "5.0"
+      ]
+    },
+    {
+      "field": "APTDIA",
+      "file_count": 7058,
+      "percentage": 62.57,
+      "sample_values": [
+        "30.0"
+      ]
+    },
+    {
+      "field": "AP_0_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "2.26191237591896e-08",
+        "0.000157566026896",
+        "2.5552777010471e-07",
+        "-3.58923657391e-06",
+        "-3.79835838840465e-06"
+      ]
+    },
+    {
+      "field": "AP_0_1",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-3.22475523816297e-10",
+        "5.4029971817e-07",
+        "9.14257909227636e-09",
+        "-3.56758937989e-08",
+        "4.44612996327864e-10"
+      ]
+    },
+    {
+      "field": "AP_0_2",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-1.48524742093798e-08",
+        "5.9298678528e-07",
+        "-6.47201803290788e-08",
+        "-2.3061516206e-07",
+        "2.3197381688037e-08"
+      ]
+    },
+    {
+      "field": "AP_0_3",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "-7.51728993741042e-12",
+        "-1.80860945619357e-11",
+        "9.8467945267325e-12",
+        "-2.06417307128517e-10",
+        "1.89476839918793e-11"
+      ]
+    },
+    {
+      "field": "AP_1_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-9.2926089045875e-10",
+        "-2.77920701383e-07",
+        "-2.45790843234062e-08",
+        "1.18641994608e-07",
+        "-1.81897008566523e-09"
+      ]
+    },
+    {
+      "field": "AP_1_1",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "1.21233671491334e-08",
+        "8.20987716779e-07",
+        "-6.92880848366817e-09",
+        "3.47849389041e-07",
+        "-1.62839533928245e-07"
+      ]
+    },
+    {
+      "field": "AP_1_2",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "-2.30561774390914e-12",
+        "7.76507423879181e-11",
+        "-6.83036124808304e-12",
+        "1.04846650340237e-09",
+        "1.97495254858383e-10"
+      ]
+    },
+    {
+      "field": "AP_2_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-2.68821520120602e-08",
+        "-8.73249572694e-07",
+        "1.49922333680081e-08",
+        "2.26196648524e-07",
+        "1.14475153213879e-07"
+      ]
+    },
+    {
+      "field": "AP_2_1",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "-2.42310633802703e-11",
+        "-2.09739813053953e-10",
+        "-6.86059827713769e-11",
+        "2.30872426586558e-12",
+        "1.94551523154235e-10"
+      ]
+    },
+    {
+      "field": "AP_3_0",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "-2.03927333988108e-12",
+        "3.92000167086337e-10",
+        "7.36878517462484e-11",
+        "1.43116080825962e-09",
+        "2.09484243644806e-10"
+      ]
+    },
+    {
+      "field": "AP_ORDER",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "3",
+        "2"
+      ]
+    },
+    {
+      "field": "A_0_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "0.0",
+        "0"
+      ]
+    },
+    {
+      "field": "A_0_1",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "0.0",
+        "0"
+      ]
+    },
+    {
+      "field": "A_0_2",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "1.48525197838303e-08",
+        "-5.94445404846e-07",
+        "6.47157699124615e-08",
+        "2.30607108088e-07",
+        "-2.31911029096122e-08"
+      ]
+    },
+    {
+      "field": "A_0_3",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "7.51757682454007e-12",
+        "1.80843385437479e-11",
+        "-9.85736546956569e-12",
+        "2.05605792415612e-10",
+        "-1.89531389927342e-11"
+      ]
+    },
+    {
+      "field": "A_1_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "0.0",
+        "0"
+      ]
+    },
+    {
+      "field": "A_1_1",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-1.21185994519175e-08",
+        "-8.23545706027e-07",
+        "6.93697520649036e-09",
+        "-3.47664456306e-07",
+        "1.62810890051112e-07"
+      ]
+    },
+    {
+      "field": "A_1_2",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "2.30866924604087e-12",
+        "-7.75955823862784e-11",
+        "6.88974058112519e-12",
+        "-1.04236662529682e-09",
+        "-1.97486625244607e-10"
+      ]
+    },
+    {
+      "field": "A_2_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "2.68818637318149e-08",
+        "8.74675392531e-07",
+        "-1.4987277275327e-08",
+        "-2.26187562274e-07",
+        "-1.14431648011152e-07"
+      ]
+    },
+    {
+      "field": "A_2_1",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "2.42300822736183e-11",
+        "2.09552760856833e-10",
+        "6.85249451995492e-11",
+        "-1.59447067390091e-12",
+        "-1.94513599641439e-10"
+      ]
+    },
+    {
+      "field": "A_3_0",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "2.04212803002342e-12",
+        "-3.91733791984341e-10",
+        "-7.36370491698814e-11",
+        "-1.42379469302503e-09",
+        "-2.09276965536688e-10"
+      ]
+    },
+    {
+      "field": "A_ORDER",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "3",
+        "2"
+      ]
+    },
+    {
+      "field": "BAYERPAT",
+      "file_count": 11206,
+      "percentage": 99.34,
+      "sample_values": [
+        "GRBG",
+        "RGGB"
+      ]
+    },
+    {
+      "field": "BIAS",
+      "file_count": 2,
+      "percentage": 0.02,
+      "sample_values": [
+        "467"
+      ]
+    },
+    {
+      "field": "BITPIX",
+      "file_count": 11280,
+      "percentage": 100.0,
+      "sample_values": [
+        "-32",
+        "16"
+      ]
+    },
+    {
+      "field": "BP_0_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-3.27615604570989e-07",
+        "0.000260839507848",
+        "-1.44454664358194e-06",
+        "-3.08623449834e-05",
+        "-5.51851637345782e-07"
+      ]
+    },
+    {
+      "field": "BP_0_1",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-9.29623711343197e-10",
+        "6.82208938974e-07",
+        "-5.29402466309392e-09",
+        "1.46806937877e-07",
+        "-1.01436503641139e-09"
+      ]
+    },
+    {
+      "field": "BP_0_2",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-1.27888250204641e-08",
+        "1.06455474949e-06",
+        "-1.05296862739184e-07",
+        "-1.13165732397e-08",
+        "-1.36386175265962e-07"
+      ]
+    },
+    {
+      "field": "BP_0_3",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "2.0836339643666e-12",
+        "4.45344394695216e-11",
+        "-3.26210213079178e-11",
+        "1.67654629495587e-09",
+        "-1.27061034100913e-10"
+      ]
+    },
+    {
+      "field": "BP_1_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "1.53737372287027e-09",
+        "-6.45913434214e-07",
+        "2.68515337848242e-08",
+        "1.28230431074e-08",
+        "1.06115237806358e-10"
+      ]
+    },
+    {
+      "field": "BP_1_1",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-9.05519141008288e-10",
+        "7.11593306925e-07",
+        "6.68221894861667e-08",
+        "-9.5924356063e-07",
+        "8.63657003681664e-08"
+      ]
+    },
+    {
+      "field": "BP_1_2",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "-1.4172606823599e-11",
+        "9.02846112344441e-11",
+        "3.33037676993891e-11",
+        "1.28777338576593e-10",
+        "-2.53038267795153e-10"
+      ]
+    },
+    {
+      "field": "BP_2_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "-2.89286336892028e-09",
+        "-1.30560094385e-06",
+        "1.96127330971041e-08",
+        "-4.99033004586e-07",
+        "-5.31205632923688e-08"
+      ]
+    },
+    {
+      "field": "BP_2_1",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "2.78638539875096e-11",
+        "-1.67735127400004e-11",
+        "-5.11065532827687e-11",
+        "1.37014161543917e-09",
+        "-2.78854838968878e-10"
+      ]
+    },
+    {
+      "field": "BP_3_0",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "-1.81505470410565e-11",
+        "-6.35635358135257e-10",
+        "-1.41071215416725e-10",
+        "2.45705531903715e-11",
+        "-3.44216744075909e-10"
+      ]
+    },
+    {
+      "field": "BP_ORDER",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "3",
+        "2"
+      ]
+    },
+    {
+      "field": "BSCALE",
+      "file_count": 9271,
+      "percentage": 82.19,
+      "sample_values": [
+        "1.0",
+        "1"
+      ]
+    },
+    {
+      "field": "BZERO",
+      "file_count": 9271,
+      "percentage": 82.19,
+      "sample_values": [
+        "0.0",
+        "32768.0",
+        "32768",
+        "0"
+      ]
+    },
+    {
+      "field": "B_0_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "0.0",
+        "0"
+      ]
+    },
+    {
+      "field": "B_0_1",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "0.0",
+        "0"
+      ]
+    },
+    {
+      "field": "B_0_2",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "1.2789156761628e-08",
+        "-1.06699806718e-06",
+        "1.05302855217162e-07",
+        "1.14324780811e-08",
+        "1.36404544521301e-07"
+      ]
+    },
+    {
+      "field": "B_0_3",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "-2.08264175806045e-12",
+        "-4.45028757107661e-11",
+        "3.2663329356658e-11",
+        "-1.67104513293794e-09",
+        "1.27123690872933e-10"
+      ]
+    },
+    {
+      "field": "B_1_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "0.0",
+        "0"
+      ]
+    },
+    {
+      "field": "B_1_1",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "9.04265429919898e-10",
+        "-7.15120308382e-07",
+        "-6.67838001374404e-08",
+        "9.59270758675e-07",
+        "-8.63417112236719e-08"
+      ]
+    },
+    {
+      "field": "B_1_2",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "1.41699880787233e-11",
+        "-9.03557970819413e-11",
+        "-3.33514399749141e-11",
+        "-1.2739632463807e-10",
+        "2.53136279988113e-10"
+      ]
+    },
+    {
+      "field": "B_2_0",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "2.89487771144707e-09",
+        "1.30839137777e-06",
+        "-1.96118852062175e-08",
+        "4.99154352176e-07",
+        "5.30960883041485e-08"
+      ]
+    },
+    {
+      "field": "B_2_1",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "-2.78596558700538e-11",
+        "1.68713104891653e-11",
+        "5.11645046176814e-11",
+        "-1.3629189247331e-09",
+        "2.79000437023986e-10"
+      ]
+    },
+    {
+      "field": "B_3_0",
+      "file_count": 14,
+      "percentage": 0.12,
+      "sample_values": [
+        "1.81486416178895e-11",
+        "6.35320297504197e-10",
+        "1.41044386762192e-10",
+        "-2.4371113607564e-11",
+        "3.44193688556957e-10"
+      ]
+    },
+    {
+      "field": "B_ORDER",
+      "file_count": 35,
+      "percentage": 0.31,
+      "sample_values": [
+        "3",
+        "2"
+      ]
+    },
+    {
+      "field": "CALMAX",
+      "file_count": 1985,
+      "percentage": 17.6,
+      "sample_values": [
+        "0.0739717185497284",
+        "0.08879990130662918",
+        "0.07515048235654831",
+        "0.07594572752714157",
+        "0.08827529847621918"
+      ]
+    },
+    {
+      "field": "CALMIN",
+      "file_count": 1985,
+      "percentage": 17.6,
+      "sample_values": [
+        "0.002059097401797771",
+        "0.00196427060291171",
+        "0.00214617233723402",
+        "0.002144720638170838",
+        "0.002131146611645817"
+      ]
+    },
+    {
+      "field": "CAMERA",
+      "file_count": 9367,
+      "percentage": 83.04,
+      "sample_values": [
+        "TELE"
+      ]
+    },
+    {
+      "field": "CAMNAME",
+      "file_count": 7058,
+      "percentage": 62.57,
+      "sample_values": [
+        "TELE",
+        "WIDE"
+      ]
+    },
+    {
+      "field": "CBLACK",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "13270"
+      ]
+    },
+    {
+      "field": "CCD-TEMP",
+      "file_count": 8805,
+      "percentage": 78.06,
+      "sample_values": [
+        "34.4375",
+        "-10.0",
+        "19.3125",
+        "24.375",
+        "27.0"
+      ]
+    },
+    {
+      "field": "CCDXBIN",
+      "file_count": 1793,
+      "percentage": 15.9,
+      "sample_values": [
+        "1"
+      ]
+    },
+    {
+      "field": "CCDYBIN",
+      "file_count": 1793,
+      "percentage": 15.9,
+      "sample_values": [
+        "1"
+      ]
+    },
+    {
+      "field": "CD1_1",
+      "file_count": 68,
+      "percentage": 0.6,
+      "sample_values": [
+        "-0.000320596703537266",
+        "-0.000634386534225781",
+        "-0.000329803066981766",
+        "-0.00066008782641121",
+        "-0.000329807905359174"
+      ]
+    },
+    {
+      "field": "CD1_2",
+      "file_count": 68,
+      "percentage": 0.6,
+      "sample_values": [
+        "0.000576369847386787",
+        "-0.000180383404138608",
+        "1.13715875584787e-07",
+        "3.8192085323003e-06",
+        "1.15378108179831e-07"
+      ]
+    },
+    {
+      "field": "CD2_1",
+      "file_count": 68,
+      "percentage": 0.6,
+      "sample_values": [
+        "0.000576369847386787",
+        "-0.000180383404138608",
+        "1.41634817200265e-07",
+        "3.8192085323003e-06",
+        "1.36565316411217e-07"
+      ]
+    },
+    {
+      "field": "CD2_2",
+      "file_count": 68,
+      "percentage": 0.6,
+      "sample_values": [
+        "0.000320596703537266",
+        "0.000634386534225781",
+        "0.000329814610199463",
+        "0.00066008782641121",
+        "0.000329819026536934"
+      ]
+    },
+    {
+      "field": "CDELT1",
+      "file_count": 23,
+      "percentage": 0.2,
+      "sample_values": [
+        "-0.000659497688873335",
+        "-0.000329801677716994",
+        "-0.000329803086586344",
+        "-0.000328748753507651",
+        "-0.000659602931625775"
+      ]
+    },
+    {
+      "field": "CDELT2",
+      "file_count": 23,
+      "percentage": 0.2,
+      "sample_values": [
+        "0.000659497688873335",
+        "0.000329817281700592",
+        "0.000329814640611124",
+        "0.00032906774336188",
+        "0.000659613383337649"
+      ]
+    },
+    {
+      "field": "COMMENT",
+      "file_count": 8874,
+      "percentage": 78.67,
+      "sample_values": [
+        "  FITS (Flexible Image Transport System) format is defined in 'Astronomy",
+        "FITS (Flexible Image Transport System) format is defined in 'Astronomy",
+        "7  Solved in 36.6 sec. Offset 177.3d."
+      ]
+    },
+    {
+      "field": "CRBL1X",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "35",
+        "43",
+        "1642",
+        "661",
+        "184"
+      ]
+    },
+    {
+      "field": "CRBL1Y",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "1079",
+        "1056",
+        "1076",
+        "963",
+        "1014"
+      ]
+    },
+    {
+      "field": "CRBL2X",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "0",
+        "40",
+        "273",
+        "58",
+        "89"
+      ]
+    },
+    {
+      "field": "CRBL2Y",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "1079",
+        "890",
+        "822",
+        "1066",
+        "811"
+      ]
+    },
+    {
+      "field": "CRBR1X",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "1899",
+        "1843",
+        "1919",
+        "1375",
+        "1902"
+      ]
+    },
+    {
+      "field": "CRBR1Y",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "1079",
+        "1053",
+        "542",
+        "963",
+        "1004"
+      ]
+    },
+    {
+      "field": "CRBR2X",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "1919",
+        "1894",
+        "1438",
+        "1915",
+        "1496"
+      ]
+    },
+    {
+      "field": "CRBR2Y",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "1079",
+        "890",
+        "822",
+        "1066",
+        "811"
+      ]
+    },
+    {
+      "field": "CREATOR",
+      "file_count": 1794,
+      "percentage": 15.9,
+      "sample_values": [
+        "ZWO Seestar S50",
+        "ZWO ASIAIR Plus",
+        "SetiAstroSuite"
+      ]
+    },
+    {
+      "field": "CROTA1",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "-177.8392827483"
+      ]
+    },
+    {
+      "field": "CROTA2",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "-177.8197512089"
+      ]
+    },
+    {
+      "field": "CRPIX1",
+      "file_count": 90,
+      "percentage": 0.8,
+      "sample_values": [
+        "1667.5",
+        "2583.5",
+        "1966.5",
+        "1182.5",
+        "1080.5"
+      ]
+    },
+    {
+      "field": "CRPIX2",
+      "file_count": 90,
+      "percentage": 0.8,
+      "sample_values": [
+        "1485.5",
+        "2173.5",
+        "2475.5",
+        "1548.5",
+        "1920.5"
+      ]
+    },
+    {
+      "field": "CRTL1X",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "35",
+        "41",
+        "599",
+        "661",
+        "178"
+      ]
+    },
+    {
+      "field": "CRTL1Y",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "95",
+        "73",
+        "533",
+        "250",
+        "46"
+      ]
+    },
+    {
+      "field": "CRTL2X",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "0",
+        "40",
+        "273",
+        "58",
+        "89"
+      ]
+    },
+    {
+      "field": "CRTL2Y",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "40",
+        "0",
+        "130",
+        "101",
+        "52"
+      ]
+    },
+    {
+      "field": "CRTR1X",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "1899",
+        "1841",
+        "877",
+        "1375",
+        "1896"
+      ]
+    },
+    {
+      "field": "CRTR1Y",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "95",
+        "70",
+        "0",
+        "250",
+        "36"
+      ]
+    },
+    {
+      "field": "CRTR2X",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "1919",
+        "1894",
+        "1438",
+        "1915",
+        "1496"
+      ]
+    },
+    {
+      "field": "CRTR2Y",
+      "file_count": 21,
+      "percentage": 0.19,
+      "sample_values": [
+        "40",
+        "0",
+        "130",
+        "101",
+        "52"
+      ]
+    },
+    {
+      "field": "CRVAL1",
+      "file_count": 90,
+      "percentage": 0.8,
+      "sample_values": [
+        "306.774349330026",
+        "306.773562936059",
+        "341.746696615716",
+        "341.929359570615",
+        "341.787004655399"
+      ]
+    },
+    {
+      "field": "CRVAL2",
+      "file_count": 90,
+      "percentage": 0.8,
+      "sample_values": [
+        "40.1602137085881",
+        "40.168706911981",
+        "58.1080524394849",
+        "58.1196869146337",
+        "58.1018353191766"
+      ]
+    },
+    {
+      "field": "CTYPE1",
+      "file_count": 90,
+      "percentage": 0.8,
+      "sample_values": [
+        "RA---TAN",
+        "RA---TAN-SIP"
+      ]
+    },
+    {
+      "field": "CTYPE2",
+      "file_count": 90,
+      "percentage": 0.8,
+      "sample_values": [
+        "DEC--TAN",
+        "DEC--TAN-SIP"
+      ]
+    },
+    {
+      "field": "CUNIT1",
+      "file_count": 87,
+      "percentage": 0.77,
+      "sample_values": [
+        "deg"
+      ]
+    },
+    {
+      "field": "CUNIT2",
+      "file_count": 86,
+      "percentage": 0.76,
+      "sample_values": [
+        "deg"
+      ]
+    },
+    {
+      "field": "CVF",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "1.00224268436432"
+      ]
+    },
+    {
+      "field": "CWHITE",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "57253"
+      ]
+    },
+    {
+      "field": "DARKTIME",
+      "file_count": 71,
+      "percentage": 0.63,
+      "sample_values": [
+        "15.0",
+        "60.0",
+        "120.0",
+        "75.0",
+        "780.0"
+      ]
+    },
+    {
+      "field": "DATAMAX",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "65535"
+      ]
+    },
+    {
+      "field": "DATAMIN",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "0"
+      ]
+    },
+    {
+      "field": "DATE",
+      "file_count": 7130,
+      "percentage": 63.21,
+      "sample_values": [
+        "2026-07-23T02:04:10",
+        "2026-07-23T00:23:08",
+        "2026-07-19T18:19:08",
+        "2026-07-19T18:21:28",
+        "2026-07-23T03:46:47"
+      ]
+    },
+    {
+      "field": "DATE-END",
+      "file_count": 5,
+      "percentage": 0.04,
+      "sample_values": [
+        "2025-03-10T01:09:25.567",
+        "2026-07-21T00:32:05.713"
+      ]
+    },
+    {
+      "field": "DATE-EXP",
+      "file_count": 1678,
+      "percentage": 14.88,
+      "sample_values": [
+        "2026-07-12T06:31:09.975933",
+        "2026-02-26T18:41:59.685369",
+        "2026-08-07T03:29:23.717659",
+        "2026-08-07T04:19:57.028053",
+        "2026-08-06T06:11:01.816192"
+      ]
+    },
+    {
+      "field": "DATE-OBS",
+      "file_count": 11182,
+      "percentage": 99.13,
+      "sample_values": [
+        "2026-07-12T06:30:59.068395",
+        "2025-03-10T00:38:34.681000",
+        "2025-07-18T16:29:29.311671",
+        "2026-07-21T00:31:45.712875",
+        "2026-02-26T18:41:29.433019"
+      ]
+    },
+    {
+      "field": "DEBAYERED",
+      "file_count": 1047,
+      "percentage": 9.28,
+      "sample_values": [
+        "True"
+      ]
+    },
+    {
+      "field": "DEC",
+      "file_count": 11181,
+      "percentage": 99.12,
+      "sample_values": [
+        "40.030526389815",
+        "40.2067862825972",
+        "40.1405955572883",
+        "40.1832481354985",
+        "90.0"
+      ]
+    },
+    {
+      "field": "DET-TEMP",
+      "file_count": 9367,
+      "percentage": 83.04,
+      "sample_values": [
+        "42",
+        "41",
+        "35",
+        "36",
+        "37"
+      ]
+    },
+    {
+      "field": "EQMODE",
+      "file_count": 11127,
+      "percentage": 98.64,
+      "sample_values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "field": "EQUINOX",
+      "file_count": 86,
+      "percentage": 0.76,
+      "sample_values": [
+        "2000.0"
+      ]
+    },
+    {
+      "field": "EXPEND",
+      "file_count": 75,
+      "percentage": 0.66,
+      "sample_values": [
+        "2461242.85410169",
+        "2461240.90265168",
+        "2461242.52228833",
+        "2461098.33404187",
+        "2460987.74993684"
+      ]
+    },
+    {
+      "field": "EXPOSURE",
+      "file_count": 1744,
+      "percentage": 15.46,
+      "sample_values": [
+        "10.0"
+      ]
+    },
+    {
+      "field": "EXPSTART",
+      "file_count": 75,
+      "percentage": 0.66,
+      "sample_values": [
+        "2461233.77151699",
+        "2461229.84810331",
+        "2461098.27881288",
+        "2460494.74586686",
+        "2461242.52205685"
+      ]
+    },
+    {
+      "field": "EXPTIME",
+      "file_count": 11267,
+      "percentage": 99.88,
+      "sample_values": [
+        "10.0",
+        "180.0",
+        "0.0583330020308495",
+        "20.0",
+        "30.0"
+      ]
+    },
+    {
+      "field": "EXTEND",
+      "file_count": 9276,
+      "percentage": 82.23,
+      "sample_values": [
+        "True"
+      ]
+    },
+    {
+      "field": "FILENAME",
+      "file_count": 2,
+      "percentage": 0.02,
+      "sample_values": [
+        "masterDark_BIN-1_4144x2822_EXPOSURE-180.00s.xisf",
+        "MasterFlat_58.3ms_-10.0C_gain120_294MC_20250720-200629.fit"
+      ]
+    },
+    {
+      "field": "FILTER",
+      "file_count": 11185,
+      "percentage": 99.16,
+      "sample_values": [
+        "IRCUT",
+        "LP",
+        "Duo-Band",
+        "Astro",
+        "Dual-Band"
+      ]
+    },
+    {
+      "field": "FIRMWARE",
+      "file_count": 9367,
+      "percentage": 83.04,
+      "sample_values": [
+        "1.1.3.2"
+      ]
+    },
+    {
+      "field": "FOCALLEN",
+      "file_count": 11275,
+      "percentage": 99.96,
+      "sample_values": [
+        "251.932258489591",
+        "251.932",
+        "369.0",
+        "251.9",
+        "251.716481144982"
+      ]
+    },
+    {
+      "field": "FOCPOS",
+      "file_count": 65,
+      "percentage": 0.58,
+      "sample_values": [
+        "1602",
+        "41408",
+        "1583",
+        "1558",
+        "1622"
+      ]
+    },
+    {
+      "field": "FOCTEMP",
+      "file_count": 6996,
+      "percentage": 62.02,
+      "sample_values": [
+        "42.0",
+        "41.0",
+        "35.0",
+        "36.0",
+        "37.0"
+      ]
+    },
+    {
+      "field": "FOCUSPOS",
+      "file_count": 1740,
+      "percentage": 15.43,
+      "sample_values": [
+        "1622",
+        "1591",
+        "1587",
+        "1597",
+        "1619"
+      ]
+    },
+    {
+      "field": "FRAME",
+      "file_count": 7058,
+      "percentage": 62.57,
+      "sample_values": [
+        "Light",
+        "Bias",
+        "Dark",
+        "Flat"
+      ]
+    },
+    {
+      "field": "GAIN",
+      "file_count": 11272,
+      "percentage": 99.93,
+      "sample_values": [
+        "80",
+        "120",
+        "80.0",
+        "100",
+        "60"
+      ]
+    },
+    {
+      "field": "GUIDECAM",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "ZWO ASI290MM"
+      ]
+    },
+    {
+      "field": "HISTORY",
+      "file_count": 9117,
+      "percentage": 80.82,
+      "sample_values": [
+        "mean stacking with winsorized sigma clipping rejection (low=3.000 high=3",
+        "Updated header to FITS_STANDARD.txt for DWARF Mini on 2026-09-11T23:46:3",
+        "Updated header to FITS_STANDARD.txt for DWARF Mini on 2026-09-12T00:07:5",
+        "Updated header to FITS_STANDARD.txt for DWARF Mini on 2026-09-11T23:46:5",
+        "Updated header to FITS_STANDARD.txt for DWARF Mini on 2026-09-11T23:47:0"
+      ]
+    },
+    {
+      "field": "IMAGEH",
+      "file_count": 4,
+      "percentage": 0.04,
+      "sample_values": [
+        "1920"
+      ]
+    },
+    {
+      "field": "IMAGETYP",
+      "file_count": 8865,
+      "percentage": 78.59,
+      "sample_values": [
+        "Light",
+        "Master Dark",
+        "Flat",
+        "Light Frame",
+        "Bias Frame"
+      ]
+    },
+    {
+      "field": "IMAGEW",
+      "file_count": 4,
+      "percentage": 0.04,
+      "sample_values": [
+        "1080"
+      ]
+    },
+    {
+      "field": "INSTRUME",
+      "file_count": 11276,
+      "percentage": 99.96,
+      "sample_values": [
+        "Seestar S50",
+        "ZWO CCD ASI294MC Pro",
+        "ZWO ASI294MC Pro",
+        "Sony IMX662",
+        "DWARF mini"
+      ]
+    },
+    {
+      "field": "LAT-OBS",
+      "file_count": 4,
+      "percentage": 0.04,
+      "sample_values": [
+        "47.9542"
+      ]
+    },
+    {
+      "field": "LATPOLE",
+      "file_count": 17,
+      "percentage": 0.15,
+      "sample_values": [
+        "0.0"
+      ]
+    },
+    {
+      "field": "LIVETIME",
+      "file_count": 7126,
+      "percentage": 63.17,
+      "sample_values": [
+        "20260.0",
+        "10600.0",
+        "819120.0",
+        "3930.0",
+        "23750.0"
+      ]
+    },
+    {
+      "field": "LONG-OBS",
+      "file_count": 4,
+      "percentage": 0.04,
+      "sample_values": [
+        "14.7906"
+      ]
+    },
+    {
+      "field": "LONPOLE",
+      "file_count": 85,
+      "percentage": 0.75,
+      "sample_values": [
+        "180.0"
+      ]
+    },
+    {
+      "field": "MACADDR",
+      "file_count": 9367,
+      "percentage": 83.04,
+      "sample_values": [
+        "40FDF36A5AEC"
+      ]
+    },
+    {
+      "field": "MIPS-FLO",
+      "file_count": 66,
+      "percentage": 0.59,
+      "sample_values": [
+        "0.0"
+      ]
+    },
+    {
+      "field": "MIPS-HI",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "204"
+      ]
+    },
+    {
+      "field": "MIPS-LO",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "198"
+      ]
+    },
+    {
+      "field": "NAXIS",
+      "file_count": 11280,
+      "percentage": 100.0,
+      "sample_values": [
+        "3",
+        "2"
+      ]
+    },
+    {
+      "field": "NAXIS1",
+      "file_count": 11280,
+      "percentage": 100.0,
+      "sample_values": [
+        "3201",
+        "5346",
+        "3899",
+        "2354",
+        "4144"
+      ]
+    },
+    {
+      "field": "NAXIS2",
+      "file_count": 11280,
+      "percentage": 100.0,
+      "sample_values": [
+        "2401",
+        "4313",
+        "4852",
+        "3139",
+        "2822"
+      ]
+    },
+    {
+      "field": "NAXIS3",
+      "file_count": 1159,
+      "percentage": 10.27,
+      "sample_values": [
+        "3",
+        "1080"
+      ]
+    },
+    {
+      "field": "NCOMBINE",
+      "file_count": 10,
+      "percentage": 0.09,
+      "sample_values": [
+        "93",
+        "69",
+        "732",
+        "785",
+        "89"
+      ]
+    },
+    {
+      "field": "NSTACK",
+      "file_count": 2,
+      "percentage": 0.02,
+      "sample_values": [
+        "89"
+      ]
+    },
+    {
+      "field": "OBJCTDEC",
+      "file_count": 71,
+      "percentage": 0.63,
+      "sample_values": [
+        "+40 01 49.895",
+        "+40 12 24.431",
+        "+40 08 26.144",
+        "+40 10 59.693",
+        "+58 06 28.989"
+      ]
+    },
+    {
+      "field": "OBJCTRA",
+      "file_count": 71,
+      "percentage": 0.63,
+      "sample_values": [
+        "20 26 21.130",
+        "20 26 53.788",
+        "20 27 11.716",
+        "20 27 5.433",
+        "22 46 59.207"
+      ]
+    },
+    {
+      "field": "OBJCTTYP",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "deepsky"
+      ]
+    },
+    {
+      "field": "OBJECT",
+      "file_count": 11187,
+      "percentage": 99.18,
+      "sample_values": [
+        "Butterfly in Cygnus",
+        "NGC 7380",
+        "SH2-142",
+        "Wizard Nebula",
+        "Light"
+      ]
+    },
+    {
+      "field": "OBSGEO-B",
+      "file_count": 4,
+      "percentage": 0.04,
+      "sample_values": [
+        "47.9542"
+      ]
+    },
+    {
+      "field": "OBSGEO-L",
+      "file_count": 4,
+      "percentage": 0.04,
+      "sample_values": [
+        "14.7906"
+      ]
+    },
+    {
+      "field": "OFFSET",
+      "file_count": 7061,
+      "percentage": 62.6,
+      "sample_values": [
+        "30",
+        "467",
+        "0"
+      ]
+    },
+    {
+      "field": "ORIGIN",
+      "file_count": 9368,
+      "percentage": 83.05,
+      "sample_values": [
+        "DWARFLAB",
+        "XISF to FITS Converter"
+      ]
+    },
+    {
+      "field": "PC1_1",
+      "file_count": 22,
+      "percentage": 0.2,
+      "sample_values": [
+        "0.365333547265999",
+        "0.99999993947522",
+        "0.999999940556717",
+        "0.999991735082396",
+        "-0.992062090867292"
+      ]
+    },
+    {
+      "field": "PC1_2",
+      "file_count": 22,
+      "percentage": 0.2,
+      "sample_values": [
+        "0.930876683155208",
+        "-0.000347921766202456",
+        "-0.000344799306646318",
+        "-0.00406568160336245",
+        "0.125748987526805"
+      ]
+    },
+    {
+      "field": "PC2_1",
+      "file_count": 22,
+      "percentage": 0.2,
+      "sample_values": [
+        "-0.930876683155208",
+        "0.000411196933577092",
+        "0.000429437628777865",
+        "0.0054054594802113",
+        "-0.125734381064485"
+      ]
+    },
+    {
+      "field": "PC2_2",
+      "file_count": 22,
+      "percentage": 0.2,
+      "sample_values": [
+        "0.365333547265999",
+        "0.999999915458537",
+        "0.999999907791657",
+        "0.999985390397184",
+        "-0.992063942202483"
+      ]
+    },
+    {
+      "field": "PLTSOLVD",
+      "file_count": 66,
+      "percentage": 0.59,
+      "sample_values": [
+        "True"
+      ]
+    },
+    {
+      "field": "PRODUCER",
+      "file_count": 1792,
+      "percentage": 15.89,
+      "sample_values": [
+        "ZWO"
+      ]
+    },
+    {
+      "field": "PROGRAM",
+      "file_count": 8870,
+      "percentage": 78.63,
+      "sample_values": [
+        "Siril 1.4.4",
+        "PixInsight 1.9.4",
+        "5.82",
+        "2.76",
+        "DWARF Header Updater v1.1"
+      ]
+    },
+    {
+      "field": "RA",
+      "file_count": 11181,
+      "percentage": 99.12,
+      "sample_values": [
+        "306.588040543648",
+        "306.724116507961",
+        "306.798817416124",
+        "306.772638427382",
+        "87.100227355957"
+      ]
+    },
+    {
+      "field": "RESTACK",
+      "file_count": 9367,
+      "percentage": 83.04,
+      "sample_values": [
+        "0"
+      ]
+    },
+    {
+      "field": "ROWORDER",
+      "file_count": 7087,
+      "percentage": 62.83,
+      "sample_values": [
+        "TOP-DOWN",
+        "BOTTOM-UP"
+      ]
+    },
+    {
+      "field": "SATMASK",
+      "file_count": 1985,
+      "percentage": 17.6,
+      "sample_values": [
+        "1"
+      ]
+    },
+    {
+      "field": "SCALE",
+      "file_count": 7058,
+      "percentage": 62.57,
+      "sample_values": [
+        "3.987786249333333"
+      ]
+    },
+    {
+      "field": "SET-TEMP",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "-10.0"
+      ]
+    },
+    {
+      "field": "SIMPLE",
+      "file_count": 11280,
+      "percentage": 100.0,
+      "sample_values": [
+        "True"
+      ]
+    },
+    {
+      "field": "SITELAT",
+      "file_count": 1804,
+      "percentage": 15.99,
+      "sample_values": [
+        "32.969",
+        "47.9542",
+        "48.8489",
+        "44.6339",
+        "44.2742"
+      ]
+    },
+    {
+      "field": "SITELONG",
+      "file_count": 1804,
+      "percentage": 15.99,
+      "sample_values": [
+        "-96.9821",
+        "14.7906",
+        "8.36972",
+        "4.38722",
+        "-72.4919"
+      ]
+    },
+    {
+      "field": "STACKCNT",
+      "file_count": 126,
+      "percentage": 1.12,
+      "sample_values": [
+        "2026",
+        "1060",
+        "10",
+        "44476",
+        "131"
+      ]
+    },
+    {
+      "field": "STACKED",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "True"
+      ]
+    },
+    {
+      "field": "TELESCOP",
+      "file_count": 11276,
+      "percentage": 99.96,
+      "sample_values": [
+        "S50_37f824c9",
+        "Telescope Simulator",
+        "Demo Interface",
+        "S50_98ac1c17",
+        "S50_1564fe54"
+      ]
+    },
+    {
+      "field": "TIMESYS",
+      "file_count": 4,
+      "percentage": 0.04,
+      "sample_values": [
+        "UTC"
+      ]
+    },
+    {
+      "field": "TOTALEXP",
+      "file_count": 1792,
+      "percentage": 15.89,
+      "sample_values": [
+        "10.0",
+        "30.0",
+        "20.0",
+        "7830.0",
+        "3630.0"
+      ]
+    },
+    {
+      "field": "WARNING",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "Warning inexact scale! Set FOV=0.98d or scale=1.2\"/pix"
+      ]
+    },
+    {
+      "field": "WCSAXES",
+      "file_count": 17,
+      "percentage": 0.15,
+      "sample_values": [
+        "2"
+      ]
+    },
+    {
+      "field": "WIDECAM",
+      "file_count": 1760,
+      "percentage": 15.6,
+      "sample_values": [
+        "0"
+      ]
+    },
+    {
+      "field": "WZCOREX0",
+      "file_count": 2,
+      "percentage": 0.02,
+      "sample_values": [
+        "1"
+      ]
+    },
+    {
+      "field": "WZCOREX1",
+      "file_count": 2,
+      "percentage": 0.02,
+      "sample_values": [
+        "1919"
+      ]
+    },
+    {
+      "field": "WZCOREY0",
+      "file_count": 2,
+      "percentage": 0.02,
+      "sample_values": [
+        "1"
+      ]
+    },
+    {
+      "field": "WZCOREY1",
+      "file_count": 2,
+      "percentage": 0.02,
+      "sample_values": [
+        "1079"
+      ]
+    },
+    {
+      "field": "WZFPRNT",
+      "file_count": 9,
+      "percentage": 0.08,
+      "sample_values": [
+        "ae92997fde17b7fa",
+        "0050b0a281f62303",
+        "e3a093e26040a0d5",
+        "2e7ec6166a5df3b3",
+        "26ccc35683861a66"
+      ]
+    },
+    {
+      "field": "WZNSUBS",
+      "file_count": 8,
+      "percentage": 0.07,
+      "sample_values": [
+        "93",
+        "69",
+        "732",
+        "785",
+        "178"
+      ]
+    },
+    {
+      "field": "XBAYROFF",
+      "file_count": 7058,
+      "percentage": 62.57,
+      "sample_values": [
+        "0"
+      ]
+    },
+    {
+      "field": "XBINNING",
+      "file_count": 11276,
+      "percentage": 99.96,
+      "sample_values": [
+        "1",
+        "1.0"
+      ]
+    },
+    {
+      "field": "XISFCLRS",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "Gray"
+      ]
+    },
+    {
+      "field": "XISFCMPR",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": []
+    },
+    {
+      "field": "XISFDIM1",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "1920"
+      ]
+    },
+    {
+      "field": "XISFDIM2",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "1080"
+      ]
+    },
+    {
+      "field": "XISFDIM3",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "1"
+      ]
+    },
+    {
+      "field": "XISFDIMS",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "3"
+      ]
+    },
+    {
+      "field": "XISFFILE",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "masterDark_BIN-1_1920x1080_EXPOSURE-0.00s.xisf"
+      ]
+    },
+    {
+      "field": "XISFGEOM",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "XISFGeometry(1920:1080:1)"
+      ]
+    },
+    {
+      "field": "XISFSAMP",
+      "file_count": 1,
+      "percentage": 0.01,
+      "sample_values": [
+        "Float32"
+      ]
+    },
+    {
+      "field": "XORGSUBF",
+      "file_count": 1793,
+      "percentage": 15.9,
+      "sample_values": [
+        "0"
+      ]
+    },
+    {
+      "field": "XPIXSZ",
+      "file_count": 11276,
+      "percentage": 99.96,
+      "sample_values": [
+        "2.90000009536743",
+        "4.63",
+        "4.63000011444092",
+        "1.45000004768372",
+        "1.45"
+      ]
+    },
+    {
+      "field": "YBAYROFF",
+      "file_count": 7058,
+      "percentage": 62.57,
+      "sample_values": [
+        "0"
+      ]
+    },
+    {
+      "field": "YBINNING",
+      "file_count": 11276,
+      "percentage": 99.96,
+      "sample_values": [
+        "1",
+        "1.0"
+      ]
+    },
+    {
+      "field": "YORGSUBF",
+      "file_count": 1793,
+      "percentage": 15.9,
+      "sample_values": [
+        "0"
+      ]
+    },
+    {
+      "field": "YPIXSZ",
+      "file_count": 11276,
+      "percentage": 99.96,
+      "sample_values": [
+        "2.90000009536743",
+        "4.63",
+        "4.63000011444092",
+        "1.45000004768372",
+        "1.45"
+      ]
+    }
+  ],
+  "standardization_candidates": [
+    {
+      "type": "Competing Synonyms",
+      "category": "Exposure Time",
+      "issue": "Multiple fields used for 'Exposure Time' across dataset",
+      "competing_fields": {
+        "EXPTIME": {
+          "count": 11267,
+          "percentage": 99.88
+        },
+        "EXPOSURE": {
+          "count": 1744,
+          "percentage": 15.46
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'EXPTIME'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Sensor / Target Temperature",
+      "issue": "Multiple fields used for 'Sensor / Target Temperature' across dataset",
+      "competing_fields": {
+        "SET-TEMP": {
+          "count": 1,
+          "percentage": 0.01
+        },
+        "CCD-TEMP": {
+          "count": 8805,
+          "percentage": 78.06
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'SET-TEMP'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Frame Type",
+      "issue": "Multiple fields used for 'Frame Type' across dataset",
+      "competing_fields": {
+        "IMAGETYP": {
+          "count": 8865,
+          "percentage": 78.59
+        },
+        "FRAME": {
+          "count": 7058,
+          "percentage": 62.57
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'IMAGETYP'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Right Ascension",
+      "issue": "Multiple fields used for 'Right Ascension' across dataset",
+      "competing_fields": {
+        "RA": {
+          "count": 11181,
+          "percentage": 99.12
+        },
+        "OBJCTRA": {
+          "count": 71,
+          "percentage": 0.63
+        },
+        "CRVAL1": {
+          "count": 90,
+          "percentage": 0.8
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'RA'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Declination",
+      "issue": "Multiple fields used for 'Declination' across dataset",
+      "competing_fields": {
+        "DEC": {
+          "count": 11181,
+          "percentage": 99.12
+        },
+        "OBJCTDEC": {
+          "count": 71,
+          "percentage": 0.63
+        },
+        "CRVAL2": {
+          "count": 90,
+          "percentage": 0.8
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'DEC'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Camera / Instrument",
+      "issue": "Multiple fields used for 'Camera / Instrument' across dataset",
+      "competing_fields": {
+        "INSTRUME": {
+          "count": 11276,
+          "percentage": 99.96
+        },
+        "CAMERA": {
+          "count": 9367,
+          "percentage": 83.04
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'INSTRUME'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Software / Publisher",
+      "issue": "Multiple fields used for 'Software / Publisher' across dataset",
+      "competing_fields": {
+        "CREATOR": {
+          "count": 1794,
+          "percentage": 15.9
+        },
+        "PROGRAM": {
+          "count": 8870,
+          "percentage": 78.63
+        },
+        "ORIGIN": {
+          "count": 9368,
+          "percentage": 83.05
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'SWCREATE'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Binning",
+      "issue": "Multiple fields used for 'Binning' across dataset",
+      "competing_fields": {
+        "XBINNING": {
+          "count": 11276,
+          "percentage": 99.96
+        },
+        "YBINNING": {
+          "count": 11276,
+          "percentage": 99.96
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'XBINNING'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Pixel Size",
+      "issue": "Multiple fields used for 'Pixel Size' across dataset",
+      "competing_fields": {
+        "XPIXSZ": {
+          "count": 11276,
+          "percentage": 99.96
+        },
+        "YPIXSZ": {
+          "count": 11276,
+          "percentage": 99.96
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'PIXSIZE'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Site Coordinates",
+      "issue": "Multiple fields used for 'Site Coordinates' across dataset",
+      "competing_fields": {
+        "SITELAT": {
+          "count": 1804,
+          "percentage": 15.99
+        },
+        "SITELONG": {
+          "count": 1804,
+          "percentage": 15.99
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'SITELAT'"
+    },
+    {
+      "type": "Competing Synonyms",
+      "category": "Observation Date",
+      "issue": "Multiple fields used for 'Observation Date' across dataset",
+      "competing_fields": {
+        "DATE-OBS": {
+          "count": 11182,
+          "percentage": 99.13
+        },
+        "DATE": {
+          "count": 7130,
+          "percentage": 63.21
+        }
+      },
+      "recommendation": "Standardize on primary keyword 'DATE-OBS'"
+    },
+    {
+      "type": "Fragmented / Optional Metadata",
+      "category": "Inconsistent Coverage",
+      "issue": "165 header fields appear in <80% of files",
+      "fragmented_fields": [
+        {
+          "field": "SET-TEMP",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "CVF",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "GUIDECAM",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "OBJCTTYP",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "MIPS-HI",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "MIPS-LO",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "XISFFILE",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "XISFSAMP",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "XISFGEOM",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "XISFCMPR",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "XISFCLRS",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "XISFDIMS",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "XISFDIM1",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "XISFDIM2",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "XISFDIM3",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "DATAMIN",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "DATAMAX",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "CROTA1",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "CROTA2",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "WARNING",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "CBLACK",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "CWHITE",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "STACKED",
+          "percentage": 0.01,
+          "count": 1
+        },
+        {
+          "field": "FILENAME",
+          "percentage": 0.02,
+          "count": 2
+        },
+        {
+          "field": "BIAS",
+          "percentage": 0.02,
+          "count": 2
+        },
+        {
+          "field": "WZCOREX0",
+          "percentage": 0.02,
+          "count": 2
+        },
+        {
+          "field": "WZCOREX1",
+          "percentage": 0.02,
+          "count": 2
+        },
+        {
+          "field": "WZCOREY0",
+          "percentage": 0.02,
+          "count": 2
+        },
+        {
+          "field": "WZCOREY1",
+          "percentage": 0.02,
+          "count": 2
+        },
+        {
+          "field": "NSTACK",
+          "percentage": 0.02,
+          "count": 2
+        },
+        {
+          "field": "DATE-END",
+          "percentage": 0.04,
+          "count": 5
+        },
+        {
+          "field": "TIMESYS",
+          "percentage": 0.04,
+          "count": 4
+        },
+        {
+          "field": "OBSGEO-L",
+          "percentage": 0.04,
+          "count": 4
+        },
+        {
+          "field": "LONG-OBS",
+          "percentage": 0.04,
+          "count": 4
+        },
+        {
+          "field": "OBSGEO-B",
+          "percentage": 0.04,
+          "count": 4
+        },
+        {
+          "field": "LAT-OBS",
+          "percentage": 0.04,
+          "count": 4
+        },
+        {
+          "field": "IMAGEW",
+          "percentage": 0.04,
+          "count": 4
+        },
+        {
+          "field": "IMAGEH",
+          "percentage": 0.04,
+          "count": 4
+        },
+        {
+          "field": "WZNSUBS",
+          "percentage": 0.07,
+          "count": 8
+        },
+        {
+          "field": "WZFPRNT",
+          "percentage": 0.08,
+          "count": 9
+        },
+        {
+          "field": "NCOMBINE",
+          "percentage": 0.09,
+          "count": 10
+        },
+        {
+          "field": "A_3_0",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "A_2_1",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "A_1_2",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "A_0_3",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "B_3_0",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "B_2_1",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "B_1_2",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "B_0_3",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "AP_3_0",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "AP_2_1",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "AP_1_2",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "AP_0_3",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "BP_3_0",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "BP_2_1",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "BP_1_2",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "BP_0_3",
+          "percentage": 0.12,
+          "count": 14
+        },
+        {
+          "field": "WCSAXES",
+          "percentage": 0.15,
+          "count": 17
+        },
+        {
+          "field": "LATPOLE",
+          "percentage": 0.15,
+          "count": 17
+        },
+        {
+          "field": "CRTL1X",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRTL1Y",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRTR1X",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRTR1Y",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRBR1X",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRBR1Y",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRBL1X",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRBL1Y",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRTL2X",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRTL2Y",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRTR2X",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRTR2Y",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRBR2X",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRBR2Y",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRBL2X",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CRBL2Y",
+          "percentage": 0.19,
+          "count": 21
+        },
+        {
+          "field": "CDELT1",
+          "percentage": 0.2,
+          "count": 23
+        },
+        {
+          "field": "CDELT2",
+          "percentage": 0.2,
+          "count": 23
+        },
+        {
+          "field": "PC1_1",
+          "percentage": 0.2,
+          "count": 22
+        },
+        {
+          "field": "PC1_2",
+          "percentage": 0.2,
+          "count": 22
+        },
+        {
+          "field": "PC2_1",
+          "percentage": 0.2,
+          "count": 22
+        },
+        {
+          "field": "PC2_2",
+          "percentage": 0.2,
+          "count": 22
+        },
+        {
+          "field": "A_ORDER",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "A_0_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "A_1_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "A_0_1",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "A_2_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "A_1_1",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "A_0_2",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "B_ORDER",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "B_0_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "B_1_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "B_0_1",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "B_2_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "B_1_1",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "B_0_2",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "AP_ORDER",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "AP_0_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "AP_1_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "AP_0_1",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "AP_2_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "AP_1_1",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "AP_0_2",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "BP_ORDER",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "BP_0_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "BP_1_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "BP_0_1",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "BP_2_0",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "BP_1_1",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "BP_0_2",
+          "percentage": 0.31,
+          "count": 35
+        },
+        {
+          "field": "FOCPOS",
+          "percentage": 0.58,
+          "count": 65
+        },
+        {
+          "field": "MIPS-FLO",
+          "percentage": 0.59,
+          "count": 66
+        },
+        {
+          "field": "PLTSOLVD",
+          "percentage": 0.59,
+          "count": 66
+        },
+        {
+          "field": "CD1_1",
+          "percentage": 0.6,
+          "count": 68
+        },
+        {
+          "field": "CD1_2",
+          "percentage": 0.6,
+          "count": 68
+        },
+        {
+          "field": "CD2_1",
+          "percentage": 0.6,
+          "count": 68
+        },
+        {
+          "field": "CD2_2",
+          "percentage": 0.6,
+          "count": 68
+        },
+        {
+          "field": "OBJCTRA",
+          "percentage": 0.63,
+          "count": 71
+        },
+        {
+          "field": "OBJCTDEC",
+          "percentage": 0.63,
+          "count": 71
+        },
+        {
+          "field": "DARKTIME",
+          "percentage": 0.63,
+          "count": 71
+        },
+        {
+          "field": "EXPSTART",
+          "percentage": 0.66,
+          "count": 75
+        },
+        {
+          "field": "EXPEND",
+          "percentage": 0.66,
+          "count": 75
+        },
+        {
+          "field": "LONPOLE",
+          "percentage": 0.75,
+          "count": 85
+        },
+        {
+          "field": "CUNIT2",
+          "percentage": 0.76,
+          "count": 86
+        },
+        {
+          "field": "EQUINOX",
+          "percentage": 0.76,
+          "count": 86
+        },
+        {
+          "field": "CUNIT1",
+          "percentage": 0.77,
+          "count": 87
+        },
+        {
+          "field": "CTYPE1",
+          "percentage": 0.8,
+          "count": 90
+        },
+        {
+          "field": "CTYPE2",
+          "percentage": 0.8,
+          "count": 90
+        },
+        {
+          "field": "CRPIX1",
+          "percentage": 0.8,
+          "count": 90
+        },
+        {
+          "field": "CRPIX2",
+          "percentage": 0.8,
+          "count": 90
+        },
+        {
+          "field": "CRVAL1",
+          "percentage": 0.8,
+          "count": 90
+        },
+        {
+          "field": "CRVAL2",
+          "percentage": 0.8,
+          "count": 90
+        },
+        {
+          "field": "STACKCNT",
+          "percentage": 1.12,
+          "count": 126
+        },
+        {
+          "field": "DEBAYERED",
+          "percentage": 9.28,
+          "count": 1047
+        },
+        {
+          "field": "NAXIS3",
+          "percentage": 10.27,
+          "count": 1159
+        },
+        {
+          "field": "DATE-EXP",
+          "percentage": 14.88,
+          "count": 1678
+        },
+        {
+          "field": "FOCUSPOS",
+          "percentage": 15.43,
+          "count": 1740
+        },
+        {
+          "field": "EXPOSURE",
+          "percentage": 15.46,
+          "count": 1744
+        },
+        {
+          "field": "WIDECAM",
+          "percentage": 15.6,
+          "count": 1760
+        },
+        {
+          "field": "PRODUCER",
+          "percentage": 15.89,
+          "count": 1792
+        },
+        {
+          "field": "TOTALEXP",
+          "percentage": 15.89,
+          "count": 1792
+        },
+        {
+          "field": "CREATOR",
+          "percentage": 15.9,
+          "count": 1794
+        },
+        {
+          "field": "XORGSUBF",
+          "percentage": 15.9,
+          "count": 1793
+        },
+        {
+          "field": "YORGSUBF",
+          "percentage": 15.9,
+          "count": 1793
+        },
+        {
+          "field": "CCDXBIN",
+          "percentage": 15.9,
+          "count": 1793
+        },
+        {
+          "field": "CCDYBIN",
+          "percentage": 15.9,
+          "count": 1793
+        },
+        {
+          "field": "SITELAT",
+          "percentage": 15.99,
+          "count": 1804
+        },
+        {
+          "field": "SITELONG",
+          "percentage": 15.99,
+          "count": 1804
+        },
+        {
+          "field": "APERTURE",
+          "percentage": 16.03,
+          "count": 1808
+        },
+        {
+          "field": "CALMIN",
+          "percentage": 17.6,
+          "count": 1985
+        },
+        {
+          "field": "CALMAX",
+          "percentage": 17.6,
+          "count": 1985
+        },
+        {
+          "field": "SATMASK",
+          "percentage": 17.6,
+          "count": 1985
+        },
+        {
+          "field": "FOCTEMP",
+          "percentage": 62.02,
+          "count": 6996
+        },
+        {
+          "field": "XBAYROFF",
+          "percentage": 62.57,
+          "count": 7058
+        },
+        {
+          "field": "YBAYROFF",
+          "percentage": 62.57,
+          "count": 7058
+        },
+        {
+          "field": "FRAME",
+          "percentage": 62.57,
+          "count": 7058
+        },
+        {
+          "field": "APTDIA",
+          "percentage": 62.57,
+          "count": 7058
+        },
+        {
+          "field": "SCALE",
+          "percentage": 62.57,
+          "count": 7058
+        },
+        {
+          "field": "CAMNAME",
+          "percentage": 62.57,
+          "count": 7058
+        },
+        {
+          "field": "OFFSET",
+          "percentage": 62.6,
+          "count": 7061
+        },
+        {
+          "field": "ROWORDER",
+          "percentage": 62.83,
+          "count": 7087
+        },
+        {
+          "field": "LIVETIME",
+          "percentage": 63.17,
+          "count": 7126
+        },
+        {
+          "field": "DATE",
+          "percentage": 63.21,
+          "count": 7130
+        },
+        {
+          "field": "CCD-TEMP",
+          "percentage": 78.06,
+          "count": 8805
+        },
+        {
+          "field": "IMAGETYP",
+          "percentage": 78.59,
+          "count": 8865
+        },
+        {
+          "field": "PROGRAM",
+          "percentage": 78.63,
+          "count": 8870
+        }
+      ],
+      "recommendation": "Configure acquisition tools to write optional headers consistently"
+    }
+  ],
+  "software_publishers": [
+    {
+      "publisher": "DWARFLAB",
+      "file_count": 9367,
+      "percentage": 83.04
+    },
+    {
+      "publisher": "DWARF Header Updater v1.1",
+      "file_count": 5068,
+      "percentage": 44.93
+    },
+    {
+      "publisher": "DWARF Header Updater v1.3",
+      "file_count": 1976,
+      "percentage": 17.52
+    },
+    {
+      "publisher": "ZWO Seestar S50",
+      "file_count": 1792,
+      "percentage": 15.89
+    },
+    {
+      "publisher": "8.46",
+      "file_count": 1665,
+      "percentage": 14.76
+    },
+    {
+      "publisher": "Siril 1.4.4",
+      "file_count": 74,
+      "percentage": 0.66
+    },
+    {
+      "publisher": "5.82",
+      "file_count": 37,
+      "percentage": 0.33
+    },
+    {
+      "publisher": "5.50",
+      "file_count": 36,
+      "percentage": 0.32
+    },
+    {
+      "publisher": "Unknown / Unspecified",
+      "file_count": 11,
+      "percentage": 0.1
+    },
+    {
+      "publisher": "Siril 1.4.1",
+      "file_count": 8,
+      "percentage": 0.07
+    },
+    {
+      "publisher": "PixInsight",
+      "file_count": 4,
+      "percentage": 0.04
+    },
+    {
+      "publisher": "Siril 1.4.0-beta4",
+      "file_count": 3,
+      "percentage": 0.03
+    },
+    {
+      "publisher": "2.76",
+      "file_count": 2,
+      "percentage": 0.02
+    },
+    {
+      "publisher": "ZWO ASIAIR Plus",
+      "file_count": 1,
+      "percentage": 0.01
+    },
+    {
+      "publisher": "PixInsight 1.9.4",
+      "file_count": 1,
+      "percentage": 0.01
+    },
+    {
+      "publisher": "XISF to FITS Converter",
+      "file_count": 1,
+      "percentage": 0.01
+    },
+    {
+      "publisher": "SetiAstroSuite",
+      "file_count": 1,
+      "percentage": 0.01
+    }
+  ]
+}

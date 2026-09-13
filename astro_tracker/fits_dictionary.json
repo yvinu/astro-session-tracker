@@ -1,0 +1,306 @@
+{
+  "exposure": {
+    "display_name": "Exposure Time (s)",
+    "data_type": "float",
+    "default": 0.0,
+    "synonyms": [
+      {
+        "card": "EXPTIME",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril", "SharpCap", "DWARFLAB"],
+        "notes": "Standard FITS exposure duration in seconds"
+      },
+      {
+        "card": "EXPOSURE",
+        "publishers": ["MaxIm DL", "Astro Pixel Processor", "PixInsight"],
+        "notes": "Alternate exposure keyword"
+      }
+    ]
+  },
+  "gain": {
+    "display_name": "Gain / Sensitivity",
+    "data_type": "str",
+    "default": "N/A",
+    "synonyms": [
+      {
+        "card": "GAIN",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "DWARFLAB", "Seestar S50", "SharpCap"],
+        "notes": "Camera sensor digital/analog gain"
+      },
+      {
+        "card": "ISO",
+        "publishers": ["DSLR Cameras", "Canon", "Nikon"],
+        "notes": "DSLR ISO sensitivity rating"
+      },
+      {
+        "card": "EGAIN",
+        "publishers": ["ZWO ASIAIR", "Siril"],
+        "notes": "Electrons per ADU gain factor"
+      },
+      {
+        "card": "CCDGAIN",
+        "publishers": ["MaxIm DL"],
+        "notes": "CCD gain setting"
+      }
+    ]
+  },
+  "sensor_temp": {
+    "display_name": "Sensor Temperature (°C)",
+    "data_type": "float",
+    "default": "N/A",
+    "synonyms": [
+      {
+        "card": "CCD-TEMP",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril", "SharpCap"],
+        "notes": "Actual measured CCD/CMOS sensor temperature"
+      },
+      {
+        "card": "DET-TEMP",
+        "publishers": ["DWARFLAB"],
+        "notes": "Detector temperature card written by DWARF hardware"
+      },
+      {
+        "card": "TEMP",
+        "publishers": ["Generic Hardware"],
+        "notes": "Unspecified temperature header"
+      }
+    ]
+  },
+  "target_temp": {
+    "display_name": "Target Setpoint Temp (°C)",
+    "data_type": "float",
+    "default": "N/A",
+    "synonyms": [
+      {
+        "card": "SET-TEMP",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "MaxIm DL", "SGP"],
+        "notes": "Target cooling temperature setpoint"
+      }
+    ]
+  },
+  "target_name": {
+    "display_name": "Target Object Name",
+    "data_type": "str",
+    "default": "Unknown",
+    "synonyms": [
+      {
+        "card": "OBJECT",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "DWARFLAB", "Siril", "PixInsight"],
+        "notes": "Astronomical target name string"
+      },
+      {
+        "card": "OBJCT",
+        "publishers": ["Legacy Software"],
+        "notes": "Abbreviated target keyword"
+      },
+      {
+        "card": "TARGET",
+        "publishers": ["KStars", "EKOS"],
+        "notes": "Target object identifier"
+      }
+    ]
+  },
+  "frame_type": {
+    "display_name": "Frame Type",
+    "data_type": "str",
+    "default": "Unknown",
+    "transform": "normalize_frame_type",
+    "synonyms": [
+      {
+        "card": "IMAGETYP",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "SharpCap", "PixInsight"],
+        "notes": "Frame classification (Light, Dark, Flat, Bias)"
+      },
+      {
+        "card": "FRAME",
+        "publishers": ["DWARFLAB", "Siril"],
+        "notes": "Frame type keyword used by DWARFLAB and Siril"
+      },
+      {
+        "card": "FRAMETYPE",
+        "publishers": ["XISF", "PixInsight"],
+        "notes": "XISF frame type property"
+      }
+    ]
+  },
+  "instrument": {
+    "display_name": "Camera / Instrument Model",
+    "data_type": "str",
+    "default": null,
+    "synonyms": [
+      {
+        "card": "INSTRUME",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril", "PixInsight"],
+        "notes": "Primary instrument name"
+      },
+      {
+        "card": "CAMERA",
+        "publishers": ["DWARFLAB"],
+        "notes": "Camera model keyword written by DWARFLAB"
+      },
+      {
+        "card": "CAMNAME",
+        "publishers": ["DWARFLAB"],
+        "notes": "Secondary camera name card written by DWARF"
+      },
+      {
+        "card": "DETECTOR",
+        "publishers": ["Professional Observatories"],
+        "notes": "Detector model header"
+      }
+    ]
+  },
+  "telescope": {
+    "display_name": "Telescope / Optics Model",
+    "data_type": "str",
+    "default": null,
+    "synonyms": [
+      {
+        "card": "TELESCOP",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril"],
+        "notes": "Telescope description"
+      },
+      {
+        "card": "TELESCOPE",
+        "publishers": ["KStars", "EKOS"],
+        "notes": "Full telescope keyword"
+      },
+      {
+        "card": "SCOPE",
+        "publishers": ["SharpCap"],
+        "notes": "Abbreviated scope header"
+      }
+    ]
+  },
+  "filter_name": {
+    "display_name": "Filter Name",
+    "data_type": "str",
+    "default": "No Filter",
+    "synonyms": [
+      {
+        "card": "FILTER",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril", "DWARFLAB"],
+        "notes": "Active optical filter name"
+      },
+      {
+        "card": "FILT",
+        "publishers": ["Legacy Software"],
+        "notes": "Abbreviated filter card"
+      }
+    ]
+  },
+  "ra": {
+    "display_name": "Right Ascension",
+    "data_type": "str",
+    "default": null,
+    "synonyms": [
+      {
+        "card": "RA",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "DWARFLAB", "Seestar S50", "Siril"],
+        "notes": "Right ascension coordinate string or degrees"
+      },
+      {
+        "card": "OBJCTRA",
+        "publishers": ["Maxim DL", "SGP"],
+        "notes": "Object RA coordinate header"
+      },
+      {
+        "card": "CRVAL1",
+        "publishers": ["WCS Solvers", "ASTAP", "Astrometry.net"],
+        "notes": "WCS center RA coordinate"
+      }
+    ]
+  },
+  "dec": {
+    "display_name": "Declination",
+    "data_type": "str",
+    "default": null,
+    "synonyms": [
+      {
+        "card": "DEC",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "DWARFLAB", "Seestar S50", "Siril"],
+        "notes": "Declination coordinate string or degrees"
+      },
+      {
+        "card": "OBJCTDEC",
+        "publishers": ["Maxim DL", "SGP"],
+        "notes": "Object DEC coordinate header"
+      },
+      {
+        "card": "CRVAL2",
+        "publishers": ["WCS Solvers", "ASTAP", "Astrometry.net"],
+        "notes": "WCS center DEC coordinate"
+      }
+    ]
+  },
+  "bayer_pattern": {
+    "display_name": "Bayer Color Matrix",
+    "data_type": "str",
+    "default": "N/A",
+    "synonyms": [
+      {
+        "card": "BAYERPAT",
+        "publishers": ["ZWO ASIAIR", "N.I.N.A.", "Seestar S50", "DWARFLAB", "Siril"],
+        "notes": "Bayer pattern (RGGB, BGGR, GBRG, GRBG)"
+      },
+      {
+        "card": "Bayer-Pattern",
+        "publishers": ["ASIAIR (hyphenated variant)"],
+        "notes": "Hyphenated Bayer pattern card"
+      },
+      {
+        "card": "COLORTYP",
+        "publishers": ["Legacy Software"],
+        "notes": "Color matrix type card"
+      }
+    ]
+  },
+  "binning": {
+    "display_name": "Sensor Binning",
+    "data_type": "str",
+    "default": "1x1",
+    "synonyms": [
+      {
+        "card": "XBINNING",
+        "publishers": ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "DWARFLAB", "Siril"],
+        "notes": "Horizontal hardware binning factor"
+      },
+      {
+        "card": "CCDXBIN",
+        "publishers": ["DWARFLAB", "Seestar S50"],
+        "notes": "CCD X binning factor"
+      }
+    ]
+  },
+  "software_creator": {
+    "display_name": "Writing Software / Publisher",
+    "data_type": "str",
+    "default": "Unknown",
+    "synonyms": [
+      {
+        "card": "SWCREATE",
+        "publishers": ["N.I.N.A.", "Siril", "Voyager", "KStars"],
+        "notes": "Software creation card"
+      },
+      {
+        "card": "CREATOR",
+        "publishers": ["PixInsight", "Seestar S50", "Astro Pixel Processor"],
+        "notes": "File creator software name and version"
+      },
+      {
+        "card": "PROGRAM",
+        "publishers": ["DWARFLAB", "SharpCap"],
+        "notes": "Acquisition program name"
+      },
+      {
+        "card": "SOFTWARE",
+        "publishers": ["Generic Software"],
+        "notes": "Generic software card"
+      },
+      {
+        "card": "ORIGIN",
+        "publishers": ["DWARFLAB", "Observatories"],
+        "notes": "Origin institution or software"
+      }
+    ]
+  }
+}

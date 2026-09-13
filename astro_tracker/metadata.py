@@ -154,36 +154,57 @@ def get_xisf_metadata(file_path):
 
 
 def get_fits_metadata(file_path):
-    """Extract metadata from a FITS file, or None if extraction fails."""
+    """Extract metadata from a FITS file using the graph metadata dictionary."""
     try:
         with fits.open(file_path, mode='readonly', ignore_missing_end=True) as hdul:
-            header = hdul[0].header
+            if len(hdul) == 0:
+                return None
+            
+            selected_hdu = hdul[0]
+            if len(hdul) > 1 and selected_hdu.header.get('NAXIS', 0) == 0:
+                selected_hdu = hdul[1]
+
+            header = selected_hdu.header
             file_name = os.path.basename(file_path)
 
-            raw_frame_type = header.get("IMAGETYP", "Unknown")
-            normalized_frame_type = normalize_frame_type(raw_frame_type)
+            raw_dict = {}
+            for card in header.cards:
+                if card.keyword and isinstance(card.keyword, str) and card.keyword.strip():
+                    k = card.keyword.strip()
+                    if k not in raw_dict:
+                        raw_dict[k] = card.value
+
+            from astro_tracker.fits_graph_db import FITSGraphDB
+            graph_engine = FITSGraphDB()
+            interp = graph_engine.interpret_header(raw_dict)
+
+            normalized_frame_type = normalize_frame_type(interp.get("frame_type", "Unknown"))
             file_category = "Processed" if _is_processed(file_name, normalized_frame_type) else "Subframe"
+
+            bin_x = raw_dict.get("XBINNING", raw_dict.get("CCDXBIN", None))
+            bin_y = raw_dict.get("YBINNING", raw_dict.get("CCDYBIN", None))
 
             return {
                 "file_name": file_name,
                 "folder": os.path.dirname(file_path),
                 "location": parse_location(file_path),
                 "file_category": file_category,
-                "target": header.get("OBJECT", "Unknown"),
-                "date": header.get("DATE-OBS", "Unknown"),
+                "target": interp.get("target_name", "Unknown"),
+                "date": raw_dict.get("DATE-OBS", raw_dict.get("DATE", "Unknown")),
                 "frame_type": normalized_frame_type,
-                "exposure": header.get("EXPTIME", 0),
-                "gain": header.get("GAIN", header.get("ISO", "N/A")),
-                "temp": header.get("SET-TEMP", header.get("CCD-TEMP", "N/A")),
-                "filter": header.get("FILTER", "No Filter"),
-                "instrument": header.get("INSTRUME", "Unknown"),
+                "exposure": interp.get("exposure", 0),
+                "gain": interp.get("gain", "N/A"),
+                "temp": interp.get("sensor_temp", "N/A"),
+                "filter": interp.get("filter_name", "No Filter"),
+                "instrument": interp.get("instrument", "Unknown"),
                 "resolution": _format_dimensions(header.get("NAXIS1"), header.get("NAXIS2")),
-                "binning": _format_dimensions(header.get("XBINNING"), header.get("YBINNING")),
+                "binning": _format_dimensions(bin_x, bin_y),
                 "optical_train": derive_optical_train(
-                    header.get("TELESCOP"), header.get("INSTRUME"), header.get("FOCALLEN")
+                    interp.get("telescope"), interp.get("instrument"), raw_dict.get("FOCALLEN")
                 ),
-                "ra": header.get("RA", header.get("OBJCTRA", None)),
-                "dec": header.get("DEC", header.get("OBJCTDEC", None)),
+                "ra": interp.get("ra", None),
+                "dec": interp.get("dec", None),
+                "detected_publishers": ", ".join(interp.get("detected_publishers", []))
             }
     except Exception:
         return None

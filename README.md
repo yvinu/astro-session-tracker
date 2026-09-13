@@ -18,6 +18,8 @@ The project has two parts:
 - **Integration calculator**: total integration time and the exposure-weighted grand mean midpoint per target group, for PixInsight/Siril-style post-processing.
 - **Rich filtering**: filter by category, frame type, target, filter, location, camera, resolution, binning, and optical train (scope + camera + focal length, auto-derived).
 - **Multiple format support**: FITS (`.fits`, `.fit`, `.fts`) and XISF (`.xisf`, optional dependency).
+- **FITS Header Analyzer & Dictionary Suite**: Analyze header field combinations across collections, detect software publishers, and standardize synonyms via an interactive dictionary and KùzuDB property graph engine.
+- **FITS Studio Web App (`/studio`)**: Unified 3-tab web interface featuring folder pickers (native OS + webkit), live glowing progress bars, interactive dictionary search, and 2D property graph visualization.
 - **Browser-based scan launcher**: pick a folder (native macOS picker) and run scans without touching the CLI, with live progress and cancellation.
 - **CSV export** on demand, from either the CLI or the dashboard.
 - **Siril export**: symlink a target group's files into a Siril-shaped working folder.
@@ -28,26 +30,69 @@ The project has two parts:
 # Core dependencies (required)
 pip install -r requirements.txt
 
+# Property Graph Engine (KùzuDB - required for dictionary graph)
+pip install kuzu
+
 # XISF support (optional but recommended)
 pip install xisf
 ```
 
-The script/server will run without the `xisf` library — XISF files are simply skipped during processing.
+The script/server will run without optional libraries — fallback engines (e.g. SQLite for property graphs, skipping XISF files) are used automatically.
 
 ## Quick start
 
 ```bash
-# One-time (or first-scan-after-upgrade) full scan with clustering + duplicate detection
-python3 -m astro_tracker.scanner -d /path/to/your/images --db astro_inventory.db --cluster
+# Option A: Launch FITS Studio Web Application (3-Tab Suite)
+python3 fits_dictionary_cli.py --studio
 
-# Serve the dashboard + local API over that database
+# Option B: Serve the main inventory dashboard + API server
 python3 -m astro_tracker.server --db astro_inventory.db
 ```
 
-Then open `http://127.0.0.1:8000`. From there:
+Then open `http://127.0.0.1:8000`:
+- **`http://127.0.0.1:8000/studio`**: FITS Studio Suite (Runner with live progress & folder pickers, Interactive Dictionary, and KùzuDB Graph Explorer).
+- **`http://127.0.0.1:8000/`**: Inventory Dashboard (live stats, target groups, sessions, duplicate detection, and file table).
+- **`http://127.0.0.1:8000/scan`**: Scan Launcher page.
 
-- The main dashboard (`/`) shows live stats, filters, target groups, sessions, duplicates, and the full file table.
-- The scan launcher (`/scan`, linked from the dashboard header) lets you pick a folder and start/monitor/cancel scans from the browser — no CLI needed for day-to-day use.
+## FITS Header Analyzer & Dictionary Suite
+
+### 1. Header Analyzer (`fits_header_analyzer.py`)
+
+Scans FITS collections to answer 5 key metadata questions across drives without mutating original files:
+1. **Most common field sets**: Primary header combinations present across files.
+2. **Unique field combinations**: Distinct header signatures (filtered by `--min-combo-pct`).
+3. **Master field list**: Complete manifest of unique header cards identified.
+4. **Standardization candidates**: Competing synonym fields (e.g., `EXPTIME` vs `EXPOSURE`, `CCD-TEMP` vs `DET-TEMP`).
+5. **Software publishers**: Origin software detected (`ZWO ASIAIR`, `DWARFLAB`, `Seestar S50`, `N.I.N.A.`, `Siril`, `PixInsight`).
+
+```bash
+# Run header analysis on a folder with default 1.0% signature threshold
+python3 fits_header_analyzer.py -d /path/to/fits/folder --min-combo-pct 1.0
+```
+
+### 2. KùzuDB Property Graph & Dictionary CLI (`fits_dictionary_cli.py`)
+
+Integrates metadata into a cumulative property graph database (`astro_fits_graph.kuzu_db`) connecting `CanonicalConcept`, `HeaderCard`, and `SoftwarePublisher` nodes via `MAPS_TO` and `WRITTEN_BY` relationships.
+
+```bash
+# Lookup canonical mapping for a header card (e.g., DET-TEMP)
+python3 fits_dictionary_cli.py --lookup DET-TEMP
+
+# Query cards written by a specific publisher (e.g., DWARFLAB)
+python3 fits_dictionary_cli.py --publisher DWARFLAB
+
+# Inspect property graph node & edge statistics
+python3 fits_dictionary_cli.py --graph-stats
+
+# Test standardized dictionary mapping on sample header dict
+python3 fits_dictionary_cli.py --test '{"EXPTIME": 120, "DET-TEMP": -10, "CAMERA": "DWARF3"}'
+
+# Launch FITS Studio Web App
+python3 fits_dictionary_cli.py --studio
+
+# Reset cumulative corpus DB & return to clean seed state
+python3 fits_dictionary_cli.py --reset-corpus
+```
 
 ## Usage
 
