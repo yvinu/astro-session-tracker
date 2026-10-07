@@ -241,3 +241,122 @@ def set_target_name(conn, target_group_id, name, aliases=None, is_custom=True):
         (target_group_id, name, json.dumps(aliases), int(is_custom), _now()),
     )
     conn.commit()
+
+
+# ---- Sources and their runs -------------------------------------------------
+
+SOURCE_FIELDS = ("name", "transport", "profile", "source_dir", "mirror_dir", "host",
+                 "interval_minutes", "stability_seconds", "enabled")
+
+
+def _source_from_row(row):
+    source = {field: row[field] for field in ("id",) + SOURCE_FIELDS}
+    source["enabled"] = bool(source["enabled"])
+    return source
+
+
+def get_sources(conn):
+    return [_source_from_row(row) for row in conn.execute("SELECT * FROM sources ORDER BY name")]
+
+
+def get_source(conn, source_id):
+    row = conn.execute("SELECT * FROM sources WHERE id = ?", (source_id,)).fetchone()
+    return _source_from_row(row) if row else None
+
+
+def create_source(conn, fields):
+    """Insert a Source. Raises sqlite3.IntegrityError if the name is taken."""
+    now = _now()
+    values = [fields.get(f) for f in SOURCE_FIELDS]
+    cursor = conn.execute(
+        f"""INSERT INTO sources ({", ".join(SOURCE_FIELDS)}, created_at, updated_at)
+            VALUES ({", ".join("?" * len(SOURCE_FIELDS))}, ?, ?)""",
+        [*values, now, now],
+    )
+    conn.commit()
+    return get_source(conn, cursor.lastrowid)
+
+
+def update_source(conn, source_id, fields):
+    changes = {f: fields[f] for f in SOURCE_FIELDS if f in fields}
+    if changes:
+        set_clause = ", ".join(f"{f} = ?" for f in changes)
+        conn.execute(
+            f"UPDATE sources SET {set_clause}, updated_at = ? WHERE id = ?", [*changes.values(), _now(), source_id]
+        )
+        conn.commit()
+    return get_source(conn, source_id)
+
+
+def delete_source(conn, source_id):
+    """Remove a Source and its run history. Its mirror folder and catalogued files are left alone."""
+    conn.execute("UPDATE files SET source_id = NULL WHERE source_id = ?", (source_id,))
+    cursor = conn.execute("DELETE FROM sources WHERE id = ?", (source_id,))
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def start_source_run(conn, source_id):
+    cursor = conn.execute(
+        "INSERT INTO source_runs (source_id, started_at) VALUES (?, ?)", (source_id, _now())
+    )
+    conn.commit()
+    return cursor.lastrowid
+
+
+def finish_source_run(conn, run_id, outcome, files_copied=0, bytes_copied=0, held_back=0, differing=0, detail=None):
+    conn.execute(
+        """UPDATE source_runs SET finished_at = ?, outcome = ?, files_copied = ?, bytes_copied = ?,
+                                  held_back = ?, differing = ?, detail = ?
+           WHERE id = ?""",
+        (_now(), outcome, files_copied, bytes_copied, held_back, differing, detail, run_id),
+    )
+    conn.commit()
+
+
+def close_abandoned_source_runs(conn):
+    """Mark runs left 'running' by a server that stopped mid-pull, so they do not look live forever."""
+    conn.execute(
+        "UPDATE source_runs SET outcome = 'error', finished_at = ?, detail = 'Server stopped during the run' WHERE outcome = 'running'",
+        (_now(),),
+    )
+    conn.commit()
+
+
+def get_source_runs(conn, source_id, limit=50):
+    rows = conn.execute(
+        "SELECT * FROM source_runs WHERE source_id = ? ORDER BY id DESC LIMIT ?", (source_id, limit)
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_last_source_run(conn, source_id):
+    runs = get_source_runs(conn, source_id, limit=1)
+    return runs[0] if runs else None
+
+
+def tag_source_files(conn):
+    """Mark which catalogued files belong to each Source's mirror, and which of those are device-made.
+
+    For a Seestar mirror, FITS files outside the `*_sub` folders are the
+    telescope's own stacks: they get the category "Device Stack" so they
+    are kept apart from subs and from stacks the user made. Runs with the
+    other derived data because a forced rescan resets file_category.
+    """
+    tagged = 0
+    for source in get_sources(conn):
+        clause, params = _under_prefixes_clause([source["mirror_dir"]])
+        cursor = conn.execute(
+            f"UPDATE files SET source_id = ? WHERE {clause} AND source_id IS NOT ?",
+            [source["id"], *params, source["id"]],
+        )
+        tagged += cursor.rowcount
+        if source["profile"] == "seestar":
+            conn.execute(
+                f"""UPDATE files SET file_category = 'Device Stack'
+                    WHERE {clause} AND folder NOT LIKE '%\\_sub' ESCAPE '\\'
+                      AND folder NOT LIKE '%\\_sub/%' ESCAPE '\\' AND file_category != 'Device Stack'""",
+                params,
+            )
+    conn.commit()
+    return tagged

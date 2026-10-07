@@ -172,3 +172,116 @@ def recompute_vocabulary():
         return vocabulary_job.recompute(conn)
     finally:
         conn.close()
+
+
+# ---- Sources ----------------------------------------------------------------
+
+class SourceBody(BaseModel):
+    name: str
+    source_dir: str
+    mirror_dir: str
+    profile: str = "all"
+    host: Optional[str] = None
+    interval_minutes: int = 60
+    stability_seconds: int = 600
+    enabled: bool = True
+
+
+def _source_fields(body):
+    from astro_tracker import source_pull
+    if body.profile not in source_pull.PROFILES:
+        raise HTTPException(status_code=400, detail=f"Unknown profile '{body.profile}'; expected one of {sorted(source_pull.PROFILES)}")
+    if not body.name.strip() or not body.source_dir.strip() or not body.mirror_dir.strip():
+        raise HTTPException(status_code=400, detail="name, source_dir and mirror_dir are required")
+    if body.interval_minutes < 0 or body.stability_seconds < 0:
+        raise HTTPException(status_code=400, detail="interval_minutes and stability_seconds cannot be negative")
+    return {
+        "name": body.name.strip(), "transport": "mounted_share", "profile": body.profile,
+        "source_dir": body.source_dir.strip(), "mirror_dir": body.mirror_dir.strip().rstrip("/"),
+        "host": (body.host or "").strip() or None, "interval_minutes": body.interval_minutes,
+        "stability_seconds": body.stability_seconds, "enabled": int(body.enabled),
+    }
+
+
+@router.get("/api/sources")
+def list_sources():
+    from astro_tracker import source_pull
+    conn = _conn()
+    try:
+        sources = library_storage.get_sources(conn)
+        for source in sources:
+            source["last_run"] = library_storage.get_last_source_run(conn, source["id"])
+            source["job"] = jobs.runner.status(f"pull:{source['id']}")
+            source["mirror_free_bytes"] = source_pull.free_space(source["mirror_dir"])
+        return {"sources": sources, "profiles": sorted(source_pull.PROFILES)}
+    finally:
+        conn.close()
+
+
+@router.post("/api/sources")
+def create_source(body: SourceBody):
+    conn = _conn()
+    try:
+        return library_storage.create_source(conn, _source_fields(body))
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail=f"A Source named '{body.name}' already exists")
+    finally:
+        conn.close()
+
+
+@router.put("/api/sources/{source_id}")
+def update_source(source_id: int, body: SourceBody):
+    conn = _conn()
+    try:
+        if library_storage.get_source(conn, source_id) is None:
+            raise HTTPException(status_code=404, detail=f"No Source {source_id}")
+        return library_storage.update_source(conn, source_id, _source_fields(body))
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail=f"A Source named '{body.name}' already exists")
+    finally:
+        conn.close()
+
+
+@router.delete("/api/sources/{source_id}")
+def delete_source(source_id: int):
+    """Remove a Source and its run history. The mirror folder and its catalogued files are kept."""
+    if jobs.runner.is_running(f"pull:{source_id}"):
+        raise HTTPException(status_code=409, detail="This Source is being pulled; wait for it to finish")
+    conn = _conn()
+    try:
+        if not library_storage.delete_source(conn, source_id):
+            raise HTTPException(status_code=404, detail=f"No Source {source_id}")
+        return {"deleted": True}
+    finally:
+        conn.close()
+
+
+@router.post("/api/sources/{source_id}/pull")
+def pull_source_now(source_id: int):
+    from astro_tracker import source_runs
+    conn = _conn()
+    try:
+        if library_storage.get_source(conn, source_id) is None:
+            raise HTTPException(status_code=404, detail=f"No Source {source_id}")
+    finally:
+        conn.close()
+    try:
+        return source_runs.start_pull_job(_db_path(), source_id)
+    except jobs.JobAlreadyRunningError:
+        raise HTTPException(status_code=409, detail="This Source is already being pulled")
+
+
+@router.post("/api/sources/{source_id}/cancel")
+def cancel_source_pull(source_id: int):
+    if not jobs.runner.cancel(f"pull:{source_id}"):
+        raise HTTPException(status_code=409, detail="This Source is not being pulled")
+    return {"cancelled": True}
+
+
+@router.get("/api/sources/{source_id}/runs")
+def source_run_history(source_id: int):
+    conn = _conn()
+    try:
+        return {"runs": library_storage.get_source_runs(conn, source_id)}
+    finally:
+        conn.close()

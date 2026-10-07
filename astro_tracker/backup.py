@@ -38,6 +38,19 @@ def snapshot(db_path, backup_dir, keep=14, now=None):
     return target
 
 
+def snapshot_is_due(backup_dir, now, every_hours=24):
+    """True when the newest snapshot is older than `every_hours`, or there is none."""
+    try:
+        names = sorted(f for f in os.listdir(backup_dir) if SNAPSHOT_PATTERN.match(f))
+    except OSError:
+        return True
+    if not names:
+        return True
+    newest = datetime.strptime(names[-1], "catalog-%Y%m%d-%H%M%S.db")
+    local_now = now.astimezone().replace(tzinfo=None) if now.tzinfo else now
+    return (local_now - newest).total_seconds() >= every_hours * 3600
+
+
 def prune(backup_dir, keep):
     """Remove all but the `keep` newest snapshots. Only files this module names are touched."""
     snapshots = sorted(f for f in os.listdir(backup_dir) if SNAPSHOT_PATTERN.match(f))

@@ -17,6 +17,8 @@ def recompute(conn):
 
     Returns a summary dict.
     """
+    library_storage.tag_source_files(conn)
+
     rigs = library_storage.get_rigs(conn)
     filter_map = library_storage.get_filter_map(conn)
 

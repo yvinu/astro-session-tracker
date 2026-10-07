@@ -32,6 +32,17 @@ A File's pixel dimensions, formatted as `NAXIS1`x`NAXIS2` (e.g. `"5496x3672"`), 
 **Binning**:
 Sensor binning (`XBINNING`/`YBINNING`), tracked as its own filterable field alongside Resolution rather than only being implicit in it.
 
+**Source**:
+A device that files are pulled from on a schedule (a smart telescope, or the ASIAIR), with its share path, its Mirror folder and its pull interval. Each pull is recorded as a run, whether it copied files, found nothing new, or found the device switched off.
+_Avoid_: Device (a Source is the configured thing, not the hardware), remote
+
+**Mirror**:
+A Source's permanent folder on the NAS, holding an unedited copy of what is on the device with the device's own folder structure, file names and file dates. A pull adds what the Mirror is missing and never overwrites, renames, moves or deletes. The Mirror is the raw store -- see [ADR-0005](docs/adr/0005-raw-store-is-a-per-source-mirror.md).
+_Avoid_: Landing folder (a Mirror is not emptied), archive
+
+**Device Stack**:
+A stacked image a smart telescope produced itself, pulled into the Mirror alongside the subs. A File category of its own, apart from Subframe and from Processed files the user made.
+
 **Rig**:
 A named optical configuration (e.g. `s50`, `80ed-533mc-r08`), registered by the user with Optical Train patterns and, optionally, the dates it was in use. Each File is assigned to at most one Rig; a File matching none is unassigned and one matching several is ambiguous, never guessed. Adding a reducer or changing the camera makes a new Rig, because flats and image scale change. The Rig, not the Optical Train, is what names and grouping use.
 _Avoid_: Setup, configuration, Optical Train (that is the raw value a Rig is matched against)

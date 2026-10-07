@@ -47,6 +47,23 @@ from astro_tracker import library_api  # noqa: E402  (needs `app` to exist)
 app.include_router(library_api.router)
 
 
+@app.on_event("startup")
+def start_scheduler():
+    """Start scheduled Source pulls and the nightly catalog snapshot, when enabled for this deployment.
+
+    Off by default so that running the server on a laptop, or under
+    tests, never starts copying from devices on its own.
+    """
+    if not config.scheduler_enabled():
+        return
+    from astro_tracker import library_storage, source_runs
+    conn = storage.connect(DB_PATH)
+    storage.init_schema(conn)
+    library_storage.close_abandoned_source_runs(conn)
+    conn.close()
+    source_runs.Scheduler(DB_PATH).start()
+
+
 @app.get("/")
 def serve_dashboard():
     return FileResponse(DASHBOARD_PATH)

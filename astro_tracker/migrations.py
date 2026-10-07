@@ -77,7 +77,39 @@ def _m3_vocabularies(conn):
     )
 
 
-MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies]
+def _m4_sources(conn):
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS sources (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            transport TEXT NOT NULL DEFAULT 'mounted_share',
+            profile TEXT NOT NULL DEFAULT 'all',
+            source_dir TEXT NOT NULL,
+            mirror_dir TEXT NOT NULL,
+            host TEXT,
+            interval_minutes INTEGER NOT NULL DEFAULT 60,
+            stability_seconds INTEGER NOT NULL DEFAULT 600,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS source_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+            started_at TEXT NOT NULL,
+            finished_at TEXT,
+            outcome TEXT NOT NULL DEFAULT 'running',
+            files_copied INTEGER NOT NULL DEFAULT 0,
+            bytes_copied INTEGER NOT NULL DEFAULT 0,
+            held_back INTEGER NOT NULL DEFAULT 0,
+            differing INTEGER NOT NULL DEFAULT 0,
+            detail TEXT
+        );
+    """)
+    _add_column(conn, "files", "source_id INTEGER")
+
+
+MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies, _m4_sources]
 
 
 def migrate(conn):
