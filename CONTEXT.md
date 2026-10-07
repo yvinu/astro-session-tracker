@@ -66,6 +66,14 @@ _Avoid_: Job, session (a session is a night of capture)
 One hand-out of subs for a Project, fixed when it is created. Its manifest lists every sub with its Content Hash, grouped by Rig and Filter, each with its position in the order Siril numbers files. A changed selection makes a new Checkout; an existing one is never edited.
 _Avoid_: Export, copy
 
+**Run**:
+One pass through one tool on a Project, recorded at check-in: a stacking run or a post-processing run, with the tool's name, the Checkout it worked from, and notes for anything the tool did not log. Its logs and settings are stored in the run's own folder.
+_Avoid_: Job (background work inside the app), session
+
+**Artifact**:
+A file checked in to a Project: a stack or final (stored under a Canonical Name), or a supporting file such as a log, conversion file, receipt or project file (stored under the name the tool gave it). Never a raw capture.
+_Avoid_: Output (only some Artifacts are outputs), File (a File is a catalogued capture or library image)
+
 **Stage**:
 What an output image is, from a fixed list: `stack`, `stack-cc`, `starless`, `stars`, `final`.
 

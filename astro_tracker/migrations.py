@@ -157,7 +157,42 @@ def _m5_projects(conn):
     """)
 
 
-MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies, _m4_sources, _m5_projects]
+def _m6_runs_and_artifacts(conn):
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            checkout_id INTEGER REFERENCES checkouts(id),
+            number INTEGER NOT NULL,
+            kind TEXT NOT NULL,
+            tool TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            UNIQUE(project_id, number)
+        );
+        CREATE TABLE IF NOT EXISTS artifacts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            run_id INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+            kind TEXT NOT NULL,
+            stage TEXT,
+            original_name TEXT NOT NULL,
+            original_relpath TEXT NOT NULL,
+            stored_relpath TEXT NOT NULL,
+            content_hash TEXT NOT NULL,
+            size INTEGER NOT NULL,
+            version INTEGER,
+            rig TEXT,
+            filter TEXT,
+            frames INTEGER,
+            exposure REAL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_artifacts_project_hash ON artifacts(project_id, content_hash);
+    """)
+
+
+MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies, _m4_sources, _m5_projects, _m6_runs_and_artifacts]
 
 
 def migrate(conn):

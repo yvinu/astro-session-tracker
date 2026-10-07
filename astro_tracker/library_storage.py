@@ -514,3 +514,141 @@ def get_checkout_manifest(conn, checkout_id):
 def set_checkout_working_dir(conn, checkout_id, working_dir):
     conn.execute("UPDATE checkouts SET working_dir = ? WHERE id = ?", (working_dir, checkout_id))
     conn.commit()
+
+
+# ---- Runs and Artifacts -----------------------------------------------------
+
+def create_run(conn, project_id, checkout_id, kind, tool, notes=None):
+    row = conn.execute("SELECT COALESCE(MAX(number), 0) + 1 AS n FROM runs WHERE project_id = ?", (project_id,)).fetchone()
+    cursor = conn.execute(
+        "INSERT INTO runs (project_id, checkout_id, number, kind, tool, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (project_id, checkout_id, row["n"], kind, tool, notes, _now()),
+    )
+    conn.commit()
+    return get_run(conn, cursor.lastrowid)
+
+
+def get_run(conn, run_id):
+    row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def delete_run(conn, run_id):
+    conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
+    conn.commit()
+
+
+def set_run_notes(conn, run_id, notes):
+    conn.execute("UPDATE runs SET notes = ? WHERE id = ?", (notes, run_id))
+    conn.commit()
+
+
+def get_runs(conn, project_id):
+    """A Project's runs, oldest first, each with its Artifacts."""
+    runs = [dict(row) for row in conn.execute("SELECT * FROM runs WHERE project_id = ? ORDER BY number", (project_id,))]
+    for run in runs:
+        run["artifacts"] = [dict(row) for row in conn.execute(
+            "SELECT * FROM artifacts WHERE run_id = ? ORDER BY stored_relpath", (run["id"],))]
+    return runs
+
+
+def get_artifact(conn, artifact_id):
+    row = conn.execute("SELECT * FROM artifacts WHERE id = ?", (artifact_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def find_artifact_by_hash(conn, project_id, content_hash):
+    row = conn.execute(
+        "SELECT * FROM artifacts WHERE project_id = ? AND content_hash = ?", (project_id, content_hash)
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def get_known_artifact_hashes(conn, project_id, hashes):
+    """Which of the given Content hashes the Project already holds."""
+    if not hashes:
+        return set()
+    placeholders = ",".join("?" * len(hashes))
+    rows = conn.execute(
+        f"SELECT DISTINCT content_hash FROM artifacts WHERE project_id = ? AND content_hash IN ({placeholders})",
+        [project_id, *hashes],
+    )
+    return {row["content_hash"] for row in rows}
+
+
+def get_next_artifact_version(conn, project_id, rig, filter_name, stage):
+    row = conn.execute(
+        """SELECT COALESCE(MAX(version), 0) + 1 AS v FROM artifacts
+           WHERE project_id = ? AND rig IS ? AND filter IS ? AND stage = ?""",
+        (project_id, rig, filter_name, stage),
+    ).fetchone()
+    return row["v"]
+
+
+def get_stored_relpaths(conn, project_id):
+    return {row["stored_relpath"] for row in conn.execute(
+        "SELECT stored_relpath FROM artifacts WHERE project_id = ?", (project_id,))}
+
+
+def insert_artifact(conn, fields):
+    columns = ("project_id", "run_id", "kind", "stage", "original_name", "original_relpath", "stored_relpath",
+               "content_hash", "size", "version", "rig", "filter", "frames", "exposure")
+    cursor = conn.execute(
+        f"INSERT INTO artifacts ({', '.join(columns)}, created_at) VALUES ({', '.join('?' * len(columns))}, ?)",
+        [*(fields.get(c) for c in columns), _now()],
+    )
+    conn.commit()
+    return get_artifact(conn, cursor.lastrowid)
+
+
+def get_checkout_groups(conn, checkout_id):
+    """A Checkout's (rig, filter) groups with sub count and the most common exposure -- for naming outputs."""
+    rows = conn.execute(
+        """SELECT rig, filter, exposure, COUNT(*) AS n FROM checkout_entries
+           WHERE checkout_id = ? GROUP BY rig, filter, exposure ORDER BY n DESC""",
+        (checkout_id,),
+    ).fetchall()
+    groups = {}
+    for row in rows:
+        group = groups.setdefault((row["rig"], row["filter"]), {"rig": row["rig"], "filter": row["filter"], "count": 0, "exposure": row["exposure"]})
+        group["count"] += row["n"]
+    return list(groups.values())
+
+
+# ---- Lineage ----------------------------------------------------------------
+#
+# Guaranteed without parsing any log: an Artifact came from a run, a run
+# worked from one Checkout, and the Checkout's manifest lists the subs
+# that were in the working folder. So "what went into this image" is, at
+# the least, that Checkout's subs. Log parsers can later narrow it to
+# the frames a tool actually used.
+
+def get_artifact_inputs(conn, artifact_id):
+    """The subs that were available to an Artifact: the manifest entries of its run's Checkout."""
+    rows = conn.execute(
+        """SELECT e.file_id, e.path, e.file_name, e.content_hash, e.night, e.rig, e.filter, e.position, e.exposure
+           FROM artifacts a JOIN runs r ON r.id = a.run_id
+           JOIN checkout_entries e ON e.checkout_id = r.checkout_id
+           WHERE a.id = ? ORDER BY e.rig, e.filter, e.position""",
+        (artifact_id,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_uses_of_content(conn, content_hash):
+    """Every stack and final produced from a Checkout that included a sub with this Content hash."""
+    rows = conn.execute(
+        """SELECT DISTINCT a.id, a.project_id, a.stage, a.stored_relpath, a.original_name, a.version,
+                           p.slug AS project_slug, r.tool, r.number AS run_number
+           FROM checkout_entries e JOIN runs r ON r.checkout_id = e.checkout_id
+           JOIN artifacts a ON a.run_id = r.id JOIN projects p ON p.id = a.project_id
+           WHERE e.content_hash = ? AND a.stage IS NOT NULL
+           ORDER BY p.slug, a.stored_relpath""",
+        (content_hash,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_file_content_hash(conn, file_id):
+    row = conn.execute("SELECT content_hash FROM files WHERE id = ?", (file_id,)).fetchone()
+    return row["content_hash"] if row else None

@@ -5,10 +5,11 @@ validate input, call the module that does the work, and shape the
 response.
 """
 
+import hmac
 import sqlite3
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from astro_tracker import config, hashing, jobs, library_storage, storage, vocabulary, vocabulary_job
@@ -386,3 +387,215 @@ def get_manifest(checkout_id: int):
     if stored is None:
         raise HTTPException(status_code=404, detail=f"No Checkout {checkout_id}")
     return stored
+
+
+# ---- Runs, Artifacts and lineage (read side, for the UI) ---------------------
+
+@router.get("/api/projects/{ref}/runs")
+def list_runs(ref: str):
+    from astro_tracker import checkin
+    conn = _conn()
+    try:
+        project = _project_or_404(conn, ref)
+        runs = library_storage.get_runs(conn, project["id"])
+        for run in runs:
+            run["folder"] = checkin.run_folder(run)
+        return {"runs": runs}
+    finally:
+        conn.close()
+
+
+class NotesBody(BaseModel):
+    notes: str
+
+
+@router.put("/api/runs/{run_id}/notes")
+def save_run_notes(run_id: int, body: NotesBody):
+    """Record what was done in a run -- the only record there is for tools that write no log."""
+    from astro_tracker import checkin
+    conn = _conn()
+    try:
+        run = library_storage.get_run(conn, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"No run {run_id}")
+        library_storage.set_run_notes(conn, run_id, body.notes)
+        checkin.write_record(conn, library_storage.get_project(conn, run["project_id"]))
+        return {"run_id": run_id, "notes": body.notes}
+    finally:
+        conn.close()
+
+
+@router.get("/api/artifacts/{artifact_id}/inputs")
+def artifact_inputs(artifact_id: int):
+    """What went into an output: the subs of the Checkout its run worked from."""
+    conn = _conn()
+    try:
+        artifact = library_storage.get_artifact(conn, artifact_id)
+        if artifact is None:
+            raise HTTPException(status_code=404, detail=f"No Artifact {artifact_id}")
+        inputs = library_storage.get_artifact_inputs(conn, artifact_id)
+        return {"artifact": artifact, "sub_count": len(inputs), "subs": inputs}
+    finally:
+        conn.close()
+
+
+@router.get("/api/files/{file_id}/uses")
+def file_uses(file_id: int):
+    """Where a sub was used: every stack and final from a Checkout that included it."""
+    conn = _conn()
+    try:
+        content_hash = library_storage.get_file_content_hash(conn, file_id)
+        return {"file_id": file_id, "uses": library_storage.get_uses_of_content(conn, content_hash) if content_hash else []}
+    finally:
+        conn.close()
+
+
+# ---- Mac CLI ----------------------------------------------------------------
+#
+# The UI has no login: it is a single-user tool on the home network. The
+# CLI endpoints are the ones that hand out file paths in bulk and accept
+# uploads into the library, so they require the shared token set in
+# ASTRO_CLI_TOKEN, and are switched off entirely when it is not set.
+
+def require_cli_token(request: Request):
+    expected = config.cli_token()
+    if not expected:
+        raise HTTPException(status_code=503, detail="CLI access is not configured on the server (ASTRO_CLI_TOKEN)")
+    supplied = request.headers.get("authorization", "")
+    if not hmac.compare_digest(supplied.encode(), f"Bearer {expected}".encode()):
+        raise HTTPException(status_code=401, detail="Missing or wrong CLI token")
+
+
+cli = APIRouter(prefix="/api/cli", dependencies=[Depends(require_cli_token)])
+
+
+@cli.get("/projects")
+def cli_projects():
+    conn = _conn()
+    try:
+        return {"projects": library_storage.get_projects(conn)}
+    finally:
+        conn.close()
+
+
+@cli.get("/projects/{ref}/manifest")
+def cli_latest_manifest(ref: str):
+    """The manifest of a Project's most recent Checkout."""
+    conn = _conn()
+    try:
+        project = _project_or_404(conn, ref)
+        checkout_id = library_storage.get_latest_checkout_id(conn, project["id"])
+        if checkout_id is None:
+            raise HTTPException(status_code=404, detail=f"Project '{project['slug']}' has no Checkout yet; create one in the UI")
+        return library_storage.get_checkout_manifest(conn, checkout_id)
+    finally:
+        conn.close()
+
+
+class WorkingDirBody(BaseModel):
+    working_dir: str
+
+
+@cli.post("/checkouts/{checkout_id}/working-dir")
+def cli_set_working_dir(checkout_id: int, body: WorkingDirBody):
+    conn = _conn()
+    try:
+        if library_storage.get_checkout_manifest(conn, checkout_id) is None:
+            raise HTTPException(status_code=404, detail=f"No Checkout {checkout_id}")
+        library_storage.set_checkout_working_dir(conn, checkout_id, body.working_dir)
+        return {"checkout_id": checkout_id, "working_dir": body.working_dir}
+    finally:
+        conn.close()
+
+
+class HashesBody(BaseModel):
+    hashes: List[str]
+
+
+@cli.post("/projects/{ref}/known-hashes")
+def cli_known_hashes(ref: str, body: HashesBody):
+    """Which of these Content hashes the Project already holds, so check-in uploads only what is new."""
+    conn = _conn()
+    try:
+        project = _project_or_404(conn, ref)
+        return {"known": sorted(library_storage.get_known_artifact_hashes(conn, project["id"], body.hashes))}
+    finally:
+        conn.close()
+
+
+class RunBody(BaseModel):
+    kind: str
+    tool: str
+    checkout_id: Optional[int] = None
+    notes: Optional[str] = None
+
+
+@cli.post("/projects/{ref}/runs")
+def cli_start_run(ref: str, body: RunBody):
+    from astro_tracker import checkin
+    conn = _conn()
+    try:
+        project = _project_or_404(conn, ref)
+        run = checkin.start_run(conn, project, body.kind, body.tool, body.checkout_id, body.notes)
+        return dict(run, folder=checkin.run_folder(run))
+    except checkin.CheckinError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+
+@cli.put("/runs/{run_id}/files")
+async def cli_upload_file(run_id: int, request: Request, relpath: str, kind: str, sha256: str,
+                          stage: Optional[str] = None, rig: Optional[str] = None,
+                          filter: Optional[str] = None, frames: Optional[int] = None):
+    """Receive one file for a run. The request body is the file's bytes.
+
+    Written to a temporary file inside the Project folder first; it is
+    only moved into place and recorded once its hash matches `sha256`.
+    """
+    from astro_tracker import checkin
+    conn = _conn()
+    try:
+        run = library_storage.get_run(conn, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"No run {run_id}")
+        project = library_storage.get_project(conn, run["project_id"])
+        try:
+            temp_path = checkin.incoming_path(project)
+        except checkin.CheckinError as e:
+            raise HTTPException(status_code=503, detail=str(e))
+        try:
+            with open(temp_path, "wb") as f:
+                async for chunk in request.stream():
+                    f.write(chunk)
+            artifact, status = checkin.store_artifact(
+                conn, project, run, temp_path, relpath, kind,
+                declared_hash=sha256, stage=stage, rig=rig, filter_name=filter, frames=frames,
+            )
+        except checkin.CheckinError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        finally:
+            import os
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        return {"status": status, "artifact": artifact}
+    finally:
+        conn.close()
+
+
+@cli.post("/runs/{run_id}/finish")
+def cli_finish_run(run_id: int):
+    from astro_tracker import checkin
+    conn = _conn()
+    try:
+        run = library_storage.get_run(conn, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"No run {run_id}")
+        project = library_storage.get_project(conn, run["project_id"])
+        kept = checkin.finish_run(conn, project, run)
+        return {"kept": kept is not None, "run": kept}
+    finally:
+        conn.close()
+
+
+router.include_router(cli)

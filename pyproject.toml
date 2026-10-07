@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astro-session-tracker"
+version = "0.2.0"
+description = "Astrophotography library manager: catalog, scheduled device pulls, Projects and provenance"
+requires-python = ">=3.10"
+# The service's dependencies are in requirements.txt. The `astro` CLI
+# itself needs nothing beyond the standard library, so that
+# `pip install .` on the Mac stays light.
+dependencies = []
+
+[project.scripts]
+astro = "astro_cli.main:main"
+
+[tool.setuptools]
+packages = ["astro_tracker", "astro_cli"]
