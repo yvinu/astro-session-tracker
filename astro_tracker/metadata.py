@@ -17,6 +17,23 @@ except ImportError:
 
 PROCESSED_KEYWORDS = ('stack', 'starless', 'starmask', 'master')
 
+_interpreter = None
+
+
+def _header_interpreter():
+    """The shared header dictionary engine, created on first use.
+
+    Opening it takes seconds (it initialises and seeds the graph
+    database), while interpreting a header only reads the dictionary --
+    so one instance serves every file. Creating one per file made a scan
+    of tens of thousands of files take days.
+    """
+    global _interpreter
+    if _interpreter is None:
+        from astro_tracker.fits_graph_db import FITSGraphDB
+        _interpreter = FITSGraphDB()
+    return _interpreter
+
 
 def normalize_frame_type(frame_type):
     """Normalize frame type to standard values.
@@ -174,8 +191,7 @@ def get_fits_metadata(file_path):
                     if k not in raw_dict:
                         raw_dict[k] = card.value
 
-            from astro_tracker.fits_graph_db import FITSGraphDB
-            graph_engine = FITSGraphDB()
+            graph_engine = _header_interpreter()
             interp = graph_engine.interpret_header(raw_dict)
 
             normalized_frame_type = normalize_frame_type(interp.get("frame_type", "Unknown"))
