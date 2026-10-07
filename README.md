@@ -22,7 +22,56 @@ The project has two parts:
 - **FITS Studio Web App (`/studio`)**: Unified 3-tab web interface featuring folder pickers (native OS + webkit), live glowing progress bars, interactive dictionary search, and 2D property graph visualization.
 - **Browser-based scan launcher**: pick a folder (native macOS picker) and run scans without touching the CLI, with live progress and cancellation.
 - **CSV export** on demand, from either the CLI or the dashboard.
-- **Siril export**: symlink a target group's files into a Siril-shaped working folder.
+- **Siril export**: generate a script that copies a target group's Light frames into a Siril-shaped working folder. For work tracked as a Project, `astro checkout` (below) does this with a verified manifest.
+
+## Library manager (NAS service + Mac CLI)
+
+The tracker can also run as a service on a NAS, where it pulls from the telescopes on a schedule and tracks what goes into each processed image. The design and its reasons are in [`docs/adr/`](docs/adr/) (0004 to 0008) and the vocabulary in [`CONTEXT.md`](CONTEXT.md). Everything below is at `http://<nas>:8000/library`.
+
+- **Sources**: a Source mirrors a device share into a permanent folder on the NAS. A pull copies what the mirror is missing, under a temporary name, keeps the device's file dates, leaves files still being written for the next run, and never overwrites, deletes, or writes to the device. Every run is recorded, including "device was off".
+- **Content hashes**: every file gets a SHA-256, computed in a background pass and as files arrive from a Source.
+- **Rigs, Filters, Targets**: register each optical configuration as a Rig (patterns matched against the Optical Train, with optional date ranges); map each device's filter wording to one canonical Filter; give each target group one canonical Target name.
+- **Projects and Checkouts**: a Project is processing work on a Target. A Checkout fixes the subs handed out for it, each with its Content hash, grouped by Rig and Filter.
+- **Check-in**: outputs and logs come back as a run. Stacks and finals are stored as `<target>_<rig>_<filter>_<stage>_<frames>x<exposure>s_v<NN>.<ext>`; the name the tool gave is kept in the catalog. Each output is linked to the Checkout it came from, so the subs behind it are known without parsing any log.
+
+Nothing in the library manager deletes or moves a raw file.
+
+### Running the service on the NAS
+
+```bash
+# edit the host paths and the token in deploy/docker-compose.yml first
+docker compose -f deploy/docker-compose.yml up -d --build
+```
+
+| Variable | Meaning |
+|----------|---------|
+| `ASTRO_LIBRARY_ROOTS` | `Name=/path;Other=/path2`. The name is the Location of files under that path. |
+| `ASTRO_PROJECTS_ROOT` | Folder that holds `<target>/<project>/` for checked-in work. |
+| `ASTRO_BACKUP_DIR`, `ASTRO_BACKUP_KEEP` | Where the nightly catalog snapshot goes and how many to keep. |
+| `ASTRO_SCHEDULER` | `1` to run scheduled pulls and snapshots. Off by default. |
+| `ASTRO_CLI_TOKEN` | Shared secret for the Mac CLI. CLI routes are disabled when unset. |
+
+To bring an existing catalog over, copy it, then rewrite its paths for the container's mount point. Session ratings and notes are kept:
+
+```bash
+python -m astro_tracker.migrate_catalog --db catalog.db --map /Volumes/Multimedia=/library
+```
+
+### The `astro` command on the Mac
+
+```bash
+pip install .          # installs the `astro` command; it needs only the standard library
+astro config --server http://<nas>:8000 --token <token> \
+             --work-root ~/Temp_stacking \
+             --map /library=/Volumes/Multimedia/AstroPhotos   # or an rsync remote: user@nas:/share/...
+
+astro projects
+astro checkout M8                 # copies the latest Checkout into ~/Temp_stacking/M8__M8/lights and verifies it
+#   ... stack and process in that folder ...
+astro checkin M8 --dir ~/Temp_stacking/M8__M8 --notes "Naztronomy defaults, then crop"
+```
+
+`checkout` can be re-run after an interruption; it copies only what is missing. `checkin` skips the checked-out subs and Siril's intermediate files, asks for each image's Stage (or takes `--yes` / `--stage FILE=STAGE`), and uploads only what the Project does not already hold.
 
 ## Installation
 
@@ -204,6 +253,13 @@ All endpoints are served locally by `astro_tracker.server`, no auth:
 | `GET /api/scan/recent-directories` | Recently-used scan directories. |
 | `POST /api/browse-folder` | Opens the native macOS folder picker (macOS only). |
 | `POST /api/target-groups/{id}/export-siril` | Symlinks a target group's files into a Siril-shaped working folder. |
+| `GET /library` | Library Manager page. |
+| `GET/POST /api/sources`, `PUT/DELETE /api/sources/{id}`, `POST /api/sources/{id}/pull`, `GET /api/sources/{id}/runs` | Sources, pull now, run history. |
+| `POST /api/hash/start`, `GET /api/hash/status`, `POST /api/hash/cancel` | Content hash pass. |
+| `GET /api/rigs`, `PUT/DELETE /api/rigs/{id}`, `GET/PUT /api/filters`, `GET /api/targets`, `PUT /api/targets/{group_id}` | Vocabularies. |
+| `GET/POST /api/projects`, `GET /api/projects/{slug}`, `POST /api/projects/{slug}/checkouts[/preview]`, `GET /api/checkouts/{id}/manifest` | Projects and Checkouts. |
+| `GET /api/projects/{slug}/runs`, `GET /api/artifacts/{id}/inputs`, `GET /api/files/{id}/uses`, `PUT /api/runs/{id}/notes` | Runs, outputs and lineage. |
+| `/api/cli/...` | Used by the `astro` command; requires the CLI token. |
 
 ## Data model
 
