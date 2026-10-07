@@ -23,6 +23,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASHBOARD_PATH = os.path.join(REPO_ROOT, "dashboard.html")
 SCAN_PAGE_PATH = os.path.join(REPO_ROOT, "scan.html")
 STUDIO_PATH = os.path.join(REPO_ROOT, "fits_studio.html")
+LIBRARY_PAGE_PATH = os.path.join(REPO_ROOT, "library.html")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -63,6 +64,7 @@ def get_conn():
 from astro_tracker import library_api  # noqa: E402  (needs `app` to exist)
 
 app.include_router(library_api.router)
+library_api.get_db_path = lambda: DB_PATH  # read at call time: main() sets DB_PATH from --db
 
 
 
@@ -80,6 +82,11 @@ def serve_scan_page():
 @app.get("/studio")
 def serve_studio_page():
     return FileResponse(STUDIO_PATH)
+
+
+@app.get("/library")
+def serve_library_page():
+    return FileResponse(LIBRARY_PAGE_PATH)
 
 
 @app.get("/api/fits-dictionary")

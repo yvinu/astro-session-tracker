@@ -17,10 +17,19 @@ from astro_tracker import config, hashing, jobs, library_storage, storage, vocab
 router = APIRouter()
 
 
+# Set by server.py to a function returning the catalog path in use. It
+# must come from the server module that is actually running: when the
+# server is started with `python -m astro_tracker.server`, that module is
+# `__main__`, and importing `astro_tracker.server` from here would load a
+# second copy whose DB_PATH never saw the --db argument -- these routes
+# would then quietly use the default catalog instead of the one asked for.
+get_db_path = None
+
+
 def _db_path():
-    # Looked up at call time: server.main() sets DB_PATH from --db after import.
-    from astro_tracker import server
-    return server.DB_PATH
+    if get_db_path is None:
+        raise RuntimeError("library_api.get_db_path has not been set by the server")
+    return get_db_path()
 
 
 def _conn():
