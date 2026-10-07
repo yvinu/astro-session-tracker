@@ -64,6 +64,7 @@ def test_pull_copies_catalogs_and_records_the_run(setup):
     assert rows["a.fit"]["source_id"] == source["id"] and rows["a.fit"]["file_category"] == "Subframe"
     assert rows["a.fit"]["filter_canonical"] == "UVIR" and rows["a.fit"]["mtime"] == OLD
     assert rows["Stacked_2_M 31.fit"]["file_category"] == "Device Stack"
+    assert library_storage.get_hash_counts(conn)["hashed"] == 2
 
 
 def test_device_switched_off_is_recorded_as_unreachable_not_error(setup):

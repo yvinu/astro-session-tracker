@@ -9,7 +9,7 @@ that starts a pull job for each Source whose interval has passed.
 import threading
 from datetime import datetime, timedelta, timezone
 
-from astro_tracker import backup, config, jobs, library_storage, scanner, source_pull, storage
+from astro_tracker import backup, config, hashing, jobs, library_storage, scanner, source_pull, storage
 
 OUTCOME_OK = "ok"
 OUTCOME_UNREACHABLE = "unreachable"
@@ -70,6 +70,9 @@ def run_pull(db_path, source_id, should_stop=None, progress=None, ping_fn=source
     if summary["copied"]:
         result["scan"] = scanner.scan_directory(source["mirror_dir"], db_path)
         result["derived"] = scanner.run_clustering(conn)
+        # New arrivals are hashed straight away: a sub cannot go into a
+        # Checkout until it has a Content hash.
+        result["hash"] = hashing.hash_pending(db_path, [source["mirror_dir"]], should_stop=should_stop)
     else:
         library_storage.tag_source_files(conn)
     conn.close()

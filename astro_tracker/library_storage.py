@@ -360,3 +360,157 @@ def tag_source_files(conn):
             )
     conn.commit()
     return tagged
+
+
+# ---- Projects and Checkouts -------------------------------------------------
+
+def _project_from_row(row):
+    return {key: row[key] for key in
+            ("id", "slug", "name", "target_group_id", "target_name", "status", "notes", "created_at", "updated_at")}
+
+
+def create_project(conn, slug, name, target_group_id, target_name, notes=None):
+    """Insert a Project. Raises sqlite3.IntegrityError if the slug is taken."""
+    now = _now()
+    cursor = conn.execute(
+        """INSERT INTO projects (slug, name, target_group_id, target_name, notes, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (slug, name, target_group_id, target_name, notes, now, now),
+    )
+    conn.commit()
+    return get_project(conn, cursor.lastrowid)
+
+
+def get_project(conn, project_id):
+    row = conn.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
+    return _project_from_row(row) if row else None
+
+
+def find_project(conn, ref):
+    """Look a Project up by slug, or by id when `ref` is all digits and no slug matches."""
+    row = conn.execute("SELECT * FROM projects WHERE slug = ?", (str(ref),)).fetchone()
+    if row is None and str(ref).isdigit():
+        row = conn.execute("SELECT * FROM projects WHERE id = ?", (int(ref),)).fetchone()
+    return _project_from_row(row) if row else None
+
+
+def get_projects(conn):
+    rows = conn.execute(
+        """SELECT p.*, (SELECT COUNT(*) FROM checkouts c WHERE c.project_id = p.id) AS checkout_count
+           FROM projects p ORDER BY p.status DESC, p.updated_at DESC"""
+    ).fetchall()
+    return [dict(_project_from_row(row), checkout_count=row["checkout_count"]) for row in rows]
+
+
+def get_project_slugs(conn):
+    return {row["slug"] for row in conn.execute("SELECT slug FROM projects")}
+
+
+def update_project(conn, project_id, notes=None, status=None):
+    if notes is not None:
+        conn.execute("UPDATE projects SET notes = ?, updated_at = ? WHERE id = ?", (notes, _now(), project_id))
+    if status is not None:
+        conn.execute("UPDATE projects SET status = ?, updated_at = ? WHERE id = ?", (status, _now(), project_id))
+    conn.commit()
+    return get_project(conn, project_id)
+
+
+def get_lights_for_target_group(conn, target_group_id):
+    """A target group's light subs with what a Checkout manifest needs.
+
+    content_hash is returned only when it is current (the file has not
+    changed since it was hashed); a stale hash comes back as None, so the
+    manifest builder leaves that sub out rather than recording a hash
+    that no longer describes the file.
+    """
+    rows = conn.execute(
+        """SELECT f.id, f.path, f.file_name, f.session_id, f.rig_id, f.filter_canonical, f.exposure, f.size,
+                  s.observation_night AS night,
+                  CASE WHEN f.hash_size IS f.size AND f.hash_mtime IS f.mtime THEN f.content_hash END AS content_hash
+           FROM files f LEFT JOIN sessions s ON s.id = f.session_id
+           WHERE f.target_group_id = ? AND f.frame_type = 'Light' AND f.file_category = 'Subframe'
+           ORDER BY f.path""",
+        (target_group_id,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def create_checkout(conn, project_id, selection, built, form="raw"):
+    """Store a built manifest (from manifest.build_manifest) as the Project's next Checkout. Returns its id."""
+    row = conn.execute("SELECT COALESCE(MAX(number), 0) + 1 AS n FROM checkouts WHERE project_id = ?", (project_id,)).fetchone()
+    cursor = conn.execute(
+        "INSERT INTO checkouts (project_id, number, form, selection, left_out, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (project_id, row["n"], form, json.dumps(selection), json.dumps(built["left_out"]), _now()),
+    )
+    checkout_id = cursor.lastrowid
+    conn.executemany(
+        """INSERT INTO checkout_entries
+           (checkout_id, file_id, path, file_name, content_hash, handed_hash, session_id, night, rig, filter, position, exposure, size)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        [
+            (checkout_id, e["file_id"], e["path"], e["file_name"], e["content_hash"], e["handed_hash"],
+             e["session_id"], e["night"], group["rig"], group["filter"], e["position"], e["exposure"], e["size"])
+            for group in built["groups"] for e in group["entries"]
+        ],
+    )
+    conn.execute("UPDATE projects SET updated_at = ? WHERE id = ?", (_now(), project_id))
+    conn.commit()
+    return checkout_id
+
+
+def get_checkouts(conn, project_id):
+    rows = conn.execute(
+        """SELECT c.id, c.number, c.form, c.selection, c.left_out, c.working_dir, c.created_at,
+                  COUNT(e.id) AS sub_count, COALESCE(SUM(e.exposure), 0) AS integration_seconds
+           FROM checkouts c LEFT JOIN checkout_entries e ON e.checkout_id = c.id
+           WHERE c.project_id = ? GROUP BY c.id ORDER BY c.number""",
+        (project_id,),
+    ).fetchall()
+    return [
+        dict(row, selection=json.loads(row["selection"]), left_out=json.loads(row["left_out"]))
+        for row in map(dict, rows)
+    ]
+
+
+def get_latest_checkout_id(conn, project_id):
+    row = conn.execute(
+        "SELECT id FROM checkouts WHERE project_id = ? ORDER BY number DESC LIMIT 1", (project_id,)
+    ).fetchone()
+    return row["id"] if row else None
+
+
+def get_checkout_manifest(conn, checkout_id):
+    """The stored manifest of a Checkout, in the shape the CLI and manifest.json use. None if it does not exist."""
+    checkout = conn.execute("SELECT * FROM checkouts WHERE id = ?", (checkout_id,)).fetchone()
+    if checkout is None:
+        return None
+    project = get_project(conn, checkout["project_id"])
+    groups = {}
+    for row in conn.execute(
+        "SELECT * FROM checkout_entries WHERE checkout_id = ? ORDER BY rig, filter, position", (checkout_id,)
+    ):
+        key = f"{row['rig']}__{row['filter']}"
+        group = groups.setdefault(key, {"key": key, "rig": row["rig"], "filter": row["filter"], "entries": []})
+        group["entries"].append({k: row[k] for k in (
+            "position", "file_id", "path", "file_name", "content_hash", "handed_hash",
+            "session_id", "night", "exposure", "size")})
+    for group in groups.values():
+        group["count"] = len(group["entries"])
+        group["integration_seconds"] = sum(e["exposure"] or 0 for e in group["entries"])
+        group["bytes"] = sum(e["size"] or 0 for e in group["entries"])
+    return {
+        "project": {k: project[k] for k in ("id", "slug", "name", "target_name")},
+        "checkout": {
+            "id": checkout["id"], "number": checkout["number"], "form": checkout["form"],
+            "created_at": checkout["created_at"], "selection": json.loads(checkout["selection"]),
+            "left_out": json.loads(checkout["left_out"]),
+        },
+        "groups": list(groups.values()),
+        "sub_count": sum(g["count"] for g in groups.values()),
+        "integration_seconds": sum(g["integration_seconds"] for g in groups.values()),
+    }
+
+
+def set_checkout_working_dir(conn, checkout_id, working_dir):
+    conn.execute("UPDATE checkouts SET working_dir = ? WHERE id = ?", (working_dir, checkout_id))
+    conn.commit()

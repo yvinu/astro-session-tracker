@@ -285,3 +285,104 @@ def source_run_history(source_id: int):
         return {"runs": library_storage.get_source_runs(conn, source_id)}
     finally:
         conn.close()
+
+
+# ---- Projects and Checkouts -------------------------------------------------
+
+class ProjectBody(BaseModel):
+    target_group_id: int
+    name: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class SelectionBody(BaseModel):
+    """Which of the Target's lights to check out. A field left null places no restriction."""
+    session_ids: Optional[List[int]] = None
+    rigs: Optional[List[str]] = None
+    filters: Optional[List[str]] = None
+
+
+def _project_or_404(conn, ref):
+    project = library_storage.find_project(conn, ref)
+    if project is None:
+        raise HTTPException(status_code=404, detail=f"No Project '{ref}'")
+    return project
+
+
+def _without_entries(built):
+    """A manifest summary for the selection form: group totals without the per-sub entries."""
+    return dict(built, groups=[{k: v for k, v in g.items() if k != "entries"} for g in built["groups"]])
+
+
+@router.get("/api/projects")
+def list_projects():
+    conn = _conn()
+    try:
+        return {"projects": library_storage.get_projects(conn)}
+    finally:
+        conn.close()
+
+
+@router.post("/api/projects")
+def create_project(body: ProjectBody):
+    from astro_tracker import projects
+    conn = _conn()
+    try:
+        return projects.create_project(conn, body.target_group_id, body.name, body.notes)
+    except projects.ProjectError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.get("/api/projects/{ref}")
+def get_project(ref: str):
+    from astro_tracker import projects
+    conn = _conn()
+    try:
+        project = _project_or_404(conn, ref)
+        return {
+            "project": project,
+            "folder": projects.project_dir(project),
+            "checkouts": library_storage.get_checkouts(conn, project["id"]),
+            "options": projects.checkout_options(conn, project),
+        }
+    finally:
+        conn.close()
+
+
+@router.post("/api/projects/{ref}/checkouts/preview")
+def preview_checkout(ref: str, body: SelectionBody):
+    from astro_tracker import projects
+    conn = _conn()
+    try:
+        project = _project_or_404(conn, ref)
+        return _without_entries(projects.preview_checkout(conn, project, body.model_dump(exclude_none=True)))
+    finally:
+        conn.close()
+
+
+@router.post("/api/projects/{ref}/checkouts")
+def create_checkout(ref: str, body: SelectionBody):
+    from astro_tracker import projects
+    conn = _conn()
+    try:
+        project = _project_or_404(conn, ref)
+        checkout_id = projects.create_checkout(conn, project, body.model_dump(exclude_none=True))
+        return _without_entries(library_storage.get_checkout_manifest(conn, checkout_id))
+    except projects.ProjectError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.get("/api/checkouts/{checkout_id}/manifest")
+def get_manifest(checkout_id: int):
+    conn = _conn()
+    try:
+        stored = library_storage.get_checkout_manifest(conn, checkout_id)
+    finally:
+        conn.close()
+    if stored is None:
+        raise HTTPException(status_code=404, detail=f"No Checkout {checkout_id}")
+    return stored

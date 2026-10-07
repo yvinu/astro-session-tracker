@@ -109,7 +109,55 @@ def _m4_sources(conn):
     _add_column(conn, "files", "source_id INTEGER")
 
 
-MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies, _m4_sources]
+def _m5_projects(conn):
+    # projects.target_group_id is deliberately not a foreign key: re-clustering
+    # may drop a target group (storage.save_clustering), and a Project and its
+    # manifests must outlive that. target_name keeps the name as it was.
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slug TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            target_group_id INTEGER,
+            target_name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open',
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS checkouts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            number INTEGER NOT NULL,
+            form TEXT NOT NULL DEFAULT 'raw',
+            selection TEXT NOT NULL DEFAULT '{}',
+            left_out TEXT NOT NULL DEFAULT '{}',
+            working_dir TEXT,
+            created_at TEXT NOT NULL,
+            UNIQUE(project_id, number)
+        );
+        CREATE TABLE IF NOT EXISTS checkout_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            checkout_id INTEGER NOT NULL REFERENCES checkouts(id) ON DELETE CASCADE,
+            file_id INTEGER,
+            path TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            content_hash TEXT NOT NULL,
+            handed_hash TEXT NOT NULL,
+            session_id INTEGER,
+            night TEXT,
+            rig TEXT NOT NULL,
+            filter TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            exposure REAL,
+            size INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_checkout_entries_checkout ON checkout_entries(checkout_id);
+        CREATE INDEX IF NOT EXISTS idx_checkout_entries_hash ON checkout_entries(content_hash);
+    """)
+
+
+MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies, _m4_sources, _m5_projects]
 
 
 def migrate(conn):

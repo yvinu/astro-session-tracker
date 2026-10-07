@@ -58,6 +58,14 @@ The canonical name of a filter (e.g. `UVIR`, `DUO`, `Ha`), mapped from whatever 
 The local date of the dusk an exposure followed, computed from corrected UTC with local noon as the boundary. A Source whose headers are not UTC start-of-exposure declares a correction.
 _Avoid_: Date (ambiguous across midnight)
 
+**Project**:
+One piece of processing work on a Target: it owns its Checkouts and, once work comes back, its runs, stacks and finals. A Target can have several Projects.
+_Avoid_: Job, session (a session is a night of capture)
+
+**Checkout**:
+One hand-out of subs for a Project, fixed when it is created. Its manifest lists every sub with its Content Hash, grouped by Rig and Filter, each with its position in the order Siril numbers files. A changed selection makes a new Checkout; an existing one is never edited.
+_Avoid_: Export, copy
+
 **Stage**:
 What an output image is, from a fixed list: `stack`, `stack-cc`, `starless`, `stars`, `final`.
 
