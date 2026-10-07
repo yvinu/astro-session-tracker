@@ -14,10 +14,14 @@ _Avoid_: Copy set
 
 **Duplicate Fingerprint**:
 The tuple (size, DATE-OBS, EXPTIME, OBJECT, INSTRUME) used to recognize that two Files are the same exposure, without reading file contents. See [ADR-0001](docs/adr/0001-metadata-fingerprint-for-duplicate-detection.md).
-_Avoid_: Hash, checksum (no content hashing is involved)
+_Avoid_: Hash, checksum (the fingerprint involves no content hashing; see Content Hash for the one that does)
+
+**Content Hash**:
+The SHA-256 of a File's bytes, computed on the NAS in a background pass and stored with the size and modification time it was computed at. Two Files with the same Content Hash are exactly the same file. Required before anything is deleted on the strength of another copy existing; the Duplicate Fingerprint alone is never enough for that.
+_Avoid_: Fingerprint (that is the header-based one), checksum
 
 **Location**:
-The physical drive or share a File lives on, derived from its path's mount segment (`/Volumes/<name>` on macOS, or "Internal" for paths under the boot volume) — a property of where the file *is*, not which scan run found it. Covers directly-attached external drives and NAS shares alike.
+The physical drive or share a File lives on, derived from its path: the name of the configured library root it sits under (how the service on the NAS names Locations), else the mount segment (`/Volumes/<name>` on macOS), else "Internal" for paths under the boot volume — a property of where the file *is*, not which scan run found it. Covers directly-attached external drives and NAS shares alike.
 _Avoid_: Drive (fine informally, but "Location" is the stored/filterable term), Scan directory (that's the scan-time input, not the file's location)
 
 The NAS Location is canonical for duplicate consolidation — see [ADR-0003](docs/adr/0003-nas-is-canonical-location.md).

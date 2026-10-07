@@ -42,6 +42,11 @@ def get_conn():
     return storage.connect(DB_PATH)
 
 
+from astro_tracker import library_api  # noqa: E402  (needs `app` to exist)
+
+app.include_router(library_api.router)
+
+
 @app.get("/")
 def serve_dashboard():
     return FileResponse(DASHBOARD_PATH)

@@ -35,7 +35,19 @@ def _m1_baseline(conn):
         _add_column(conn, "files", ddl)
 
 
-MIGRATIONS = [_m1_baseline]
+def _m2_content_hash(conn):
+    for ddl in (
+        "content_hash TEXT",
+        "hash_size INTEGER",
+        "hash_mtime REAL",
+        "hashed_at TEXT",
+        "hash_error TEXT",
+    ):
+        _add_column(conn, "files", ddl)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_files_content_hash ON files(content_hash)")
+
+
+MIGRATIONS = [_m1_baseline, _m2_content_hash]
 
 
 def migrate(conn):
