@@ -32,6 +32,27 @@ A File's pixel dimensions, formatted as `NAXIS1`x`NAXIS2` (e.g. `"5496x3672"`), 
 **Binning**:
 Sensor binning (`XBINNING`/`YBINNING`), tracked as its own filterable field alongside Resolution rather than only being implicit in it.
 
+**Rig**:
+A named optical configuration (e.g. `s50`, `80ed-533mc-r08`), registered by the user with Optical Train patterns and, optionally, the dates it was in use. Each File is assigned to at most one Rig; a File matching none is unassigned and one matching several is ambiguous, never guessed. Adding a reducer or changing the camera makes a new Rig, because flats and image scale change. The Rig, not the Optical Train, is what names and grouping use.
+_Avoid_: Setup, configuration, Optical Train (that is the raw value a Rig is matched against)
+
+**Target**:
+The canonical name of a target group (e.g. `M8`), unique and name-safe, with aliases. Defaults to the group's most common `OBJECT` label and can be edited; it stays attached to the group across re-clustering.
+_Avoid_: Object (that is the raw header label, which is inconsistent)
+
+**Filter**:
+The canonical name of a filter (e.g. `UVIR`, `DUO`, `Ha`), mapped from whatever each device writes in its header. Stored beside the header value, which is kept.
+
+**Night**:
+The local date of the dusk an exposure followed, computed from corrected UTC with local noon as the boundary. A Source whose headers are not UTC start-of-exposure declares a correction.
+_Avoid_: Date (ambiguous across midnight)
+
+**Stage**:
+What an output image is, from a fixed list: `stack`, `stack-cc`, `starless`, `stars`, `final`.
+
+**Canonical Name**:
+The stored name of a stack or final: `<target>_<rig>_<filter>_<stage>_<frames>x<exposure>s_v<NN>.<ext>`. Fields are separated by underscores and never contain one. The name a tool gave the file is kept in the catalog. Raw captures are never renamed.
+
 **Optical Train**:
 A File's equipment combination, auto-derived from `TELESCOP` + `INSTRUME` + `FOCALLEN` (whatever subset is present; "Unknown" only when all three are missing). Friendly aliasing on top of the raw derived key is deferred to a future release.
 _Avoid_: Rig, setup (informal synonyms; "Optical Train" is the stored/filterable term)

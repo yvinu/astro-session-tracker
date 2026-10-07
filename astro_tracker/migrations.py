@@ -47,7 +47,37 @@ def _m2_content_hash(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_files_content_hash ON files(content_hash)")
 
 
-MIGRATIONS = [_m1_baseline, _m2_content_hash]
+def _m3_vocabularies(conn):
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS rigs (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            patterns TEXT NOT NULL DEFAULT '[]',
+            date_ranges TEXT NOT NULL DEFAULT '[]',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS filter_map (
+            raw TEXT PRIMARY KEY,
+            canonical TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS target_names (
+            target_group_id INTEGER PRIMARY KEY REFERENCES target_groups(id) ON DELETE CASCADE,
+            name TEXT NOT NULL UNIQUE,
+            aliases TEXT NOT NULL DEFAULT '[]',
+            is_custom INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL
+        );
+    """)
+    for ddl in ("rig_id TEXT", "rig_status TEXT", "filter_canonical TEXT"):
+        _add_column(conn, "files", ddl)
+    from astro_tracker.vocabulary import DEFAULT_FILTER_MAP
+    conn.executemany(
+        "INSERT OR IGNORE INTO filter_map (raw, canonical) VALUES (?, ?)", list(DEFAULT_FILTER_MAP.items())
+    )
+
+
+MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies]
 
 
 def migrate(conn):
