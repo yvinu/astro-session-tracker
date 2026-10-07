@@ -76,15 +76,20 @@ def cancel_hashing():
 
 class RigBody(BaseModel):
     name: str
-    patterns: List[str]
+    patterns: List[str] = []
     date_ranges: List[List[Optional[str]]] = []
+    camera: Optional[str] = None
+    focal_min: Optional[float] = None
+    focal_max: Optional[float] = None
 
 
 @router.get("/api/rigs")
 def list_rigs():
     conn = _conn()
     try:
-        return {"rigs": library_storage.get_rigs(conn), "optical_trains": library_storage.get_optical_train_summary(conn)}
+        trains = library_storage.get_optical_train_summary(conn)
+        return {"rigs": library_storage.get_rigs(conn), "optical_trains": trains,
+                "suggestions": vocabulary.suggest_rigs(trains)}
     finally:
         conn.close()
 
@@ -95,13 +100,17 @@ def save_rig(rig_id: str, body: RigBody):
     if vocabulary.slug(rig_id, "") != rig_id:
         raise HTTPException(status_code=400, detail="Rig id may contain only letters, digits, dot and hyphen")
     patterns = [p.strip() for p in body.patterns if p.strip()]
-    if not patterns:
-        raise HTTPException(status_code=400, detail="A Rig needs at least one Optical Train pattern")
+    camera = vocabulary.normalize_camera(body.camera)
+    if not patterns and not camera:
+        raise HTTPException(status_code=400, detail="A Rig needs a camera or at least one Optical Train pattern")
+    if body.focal_min is not None and body.focal_max is not None and body.focal_min > body.focal_max:
+        raise HTTPException(status_code=400, detail="The focal length range is the wrong way round")
     if any(len(r) != 2 for r in body.date_ranges):
         raise HTTPException(status_code=400, detail="Each date range is [start, end]; either may be null")
     conn = _conn()
     try:
-        rig = library_storage.upsert_rig(conn, rig_id, body.name.strip() or rig_id, patterns, body.date_ranges)
+        rig = library_storage.upsert_rig(conn, rig_id, body.name.strip() or rig_id, patterns, body.date_ranges,
+                                         camera, body.focal_min, body.focal_max)
         return {"rig": rig, "recompute": vocabulary_job.recompute(conn)}
     finally:
         conn.close()

@@ -154,15 +154,27 @@
         <section id="vocabulary">
             <div class="card">
                 <h2>Rigs</h2>
-                <p class="hint">A Rig is one optical configuration. Patterns are matched against the Optical Train,
-                    ignoring case; <code>*</code> matches anything. A file matching no Rig is unassigned, and one
-                    matching several is ambiguous and left unassigned.</p>
+                <p class="hint">A Rig is one optical configuration. It claims files by camera and focal-length range,
+                    and optionally by patterns matched against the Optical Train (ignoring case; <code>*</code>
+                    matches anything). A file matching no Rig is unassigned, and one matching several is ambiguous
+                    and left unassigned.</p>
                 <div id="rigsTable"></div>
+                <h3>Suggested Rigs</h3>
+                <p class="hint">Unassigned Optical Trains grouped by camera and by focal lengths within 3% of each
+                    other, so the same set-up written several ways appears once. "Use" fills the form below; check
+                    the id and name, then save.</p>
+                <div id="suggestionsTable"></div>
+                <h3>Add or edit a Rig</h3>
                 <div class="row">
-                    <div><label>Rig id (letters, digits, dot, hyphen)</label><input id="rigId" placeholder="s50"></div>
-                    <div><label>Display name</label><input id="rigName" placeholder="Seestar S50"></div>
+                    <div><label>Rig id (letters, digits, dot, hyphen)</label><input id="rigId" placeholder="60ed-294mc"></div>
+                    <div><label>Display name</label><input id="rigName" placeholder="Apertura 60ED + ASI294MC Pro"></div>
                 </div>
-                <label>Optical Train patterns, one per line</label>
+                <div class="row">
+                    <div><label>Camera (vendor words and spacing are ignored)</label><input id="rigCamera" placeholder="ASI294MC Pro"></div>
+                    <div><label>Focal length from (mm)</label><input id="rigFocalMin" type="number" step="any" placeholder="365"></div>
+                    <div><label>Focal length to (mm)</label><input id="rigFocalMax" type="number" step="any" placeholder="378"></div>
+                </div>
+                <label>Extra Optical Train patterns, one per line (optional; for anything camera and focal length cannot express)</label>
                 <textarea id="rigPatterns" rows="2" placeholder="*seestar s50*"></textarea>
                 <label>Dates in use, one range per line as <code>start..end</code> (either side may be blank); empty = always</label>
                 <textarea id="rigRanges" rows="2" placeholder="2026-06-01.."></textarea>
@@ -227,7 +239,7 @@
                 <div id="hashStatus"></div>
                 <div class="actions">
                     <button id="hashStart">Start hashing pass</button>
-                    <button class="secondary" id="hashCancel">Cancel</button>
+                    <button class="danger" id="hashCancel" style="display:none">Stop hashing</button>
                 </div>
                 <div class="message" id="hashMessage"></div>
             </div>
@@ -397,13 +409,26 @@
             const [rigs, filters, targets] = await Promise.all([
                 api("GET", "/api/rigs"), api("GET", "/api/filters"), api("GET", "/api/targets")]);
 
-            $("rigsTable").innerHTML = table(["Id", "Name", "Patterns", "Dates", ""],
+            const focalText = (r) => r.focal_min == null && r.focal_max == null ? "any focal length"
+                : `${r.focal_min ?? ""} to ${r.focal_max ?? ""} mm`;
+            $("rigsTable").innerHTML = table(["Id", "Name", "Matches", "Dates", ""],
                 rigs.rigs.map((r) => [
-                    `<code>${esc(r.id)}</code>`, esc(r.name), r.patterns.map((p) => `<code>${esc(p)}</code>`).join(" "),
+                    `<code>${esc(r.id)}</code>`, esc(r.name),
+                    (r.camera ? `camera <code>${esc(r.camera)}</code>, ${esc(focalText(r))}<br>` : "")
+                        + r.patterns.map((p) => `<code>${esc(p)}</code>`).join(" "),
                     r.date_ranges.length ? r.date_ranges.map(([a, b]) => `${esc(a || "")}..${esc(b || "")}`).join("<br>") : "always",
                     `<button class="secondary" data-rig="${esc(r.id)}">Edit</button> <button class="danger" data-rig-delete="${esc(r.id)}">Remove</button>`,
                 ]), "No Rigs registered yet.");
             window.rigsById = Object.fromEntries(rigs.rigs.map((r) => [r.id, r]));
+            window.rigSuggestions = rigs.suggestions;
+            $("suggestionsTable").innerHTML = table(
+                ["Suggested id", "Camera", "Focal length", { label: "Files", num: true }, "Dates", "Optical Trains covered", ""],
+                rigs.suggestions.map((g, i) => [
+                    `<code>${esc(g.id)}</code>`, `<code>${esc(g.camera)}</code>`, `${g.focal_min} to ${g.focal_max} mm`, g.file_count,
+                    `${esc(g.first_date || "")} to ${esc(g.last_date || "")}`,
+                    g.optical_trains.map(esc).join("<br>"),
+                    `<button class="secondary" data-suggestion="${i}">Use</button>`,
+                ]), "Nothing to suggest: every Optical Train with a camera and focal length is assigned.");
 
             $("trainsTable").innerHTML = table(
                 ["Optical Train", { label: "Files", num: true }, "Dates", "Rig", ""],
@@ -441,8 +466,10 @@
 
         $("rigSave").addEventListener("click", async () => {
             try {
+                const number = (id) => $(id).value.trim() === "" ? null : Number($(id).value);
                 await api("PUT", `/api/rigs/${encodeURIComponent($("rigId").value.trim())}`, {
                     name: $("rigName").value, patterns: $("rigPatterns").value.split("\n"), date_ranges: parseRanges($("rigRanges").value),
+                    camera: $("rigCamera").value.trim() || null, focal_min: number("rigFocalMin"), focal_max: number("rigFocalMax"),
                 });
                 say("rigMessage", "Saved, and files reassigned.", "ok");
                 await loadVocabulary();
@@ -456,11 +483,18 @@
                 if (b.dataset.rig) {
                     const rig = window.rigsById[b.dataset.rig];
                     $("rigId").value = rig.id; $("rigName").value = rig.name; $("rigPatterns").value = rig.patterns.join("\n");
+                    $("rigCamera").value = rig.camera || ""; $("rigFocalMin").value = rig.focal_min ?? ""; $("rigFocalMax").value = rig.focal_max ?? "";
                     $("rigRanges").value = rig.date_ranges.map(([a, c]) => `${a || ""}..${c || ""}`).join("\n");
                 } else if (b.dataset.rigDelete) {
                     if (!confirm(`Remove the Rig "${b.dataset.rigDelete}"? Its files become unassigned.`)) return;
                     await api("DELETE", `/api/rigs/${encodeURIComponent(b.dataset.rigDelete)}`);
                     await loadVocabulary();
+                } else if (b.dataset.suggestion !== undefined) {
+                    const g = window.rigSuggestions[Number(b.dataset.suggestion)];
+                    $("rigId").value = g.id; $("rigName").value = g.name; $("rigCamera").value = g.camera;
+                    $("rigFocalMin").value = g.focal_min; $("rigFocalMax").value = g.focal_max;
+                    $("rigPatterns").value = ""; $("rigRanges").value = "";
+                    $("rigId").focus();
                 } else if (b.dataset.train) {
                     $("rigPatterns").value = b.dataset.train;
                     $("rigId").focus();
@@ -605,8 +639,22 @@
                     (job.state === "running" ? `, ${(p.hashed ?? 0) + (p.failed ?? 0)}/${p.total ?? "?"}` : "") +
                     (job.error ? `: ${esc(job.error)}` : "") + "</p>";
             }
+            const running = !!job && job.state === "running";
+            if (running) {
+                const p = job.progress || {};
+                const done = (p.hashed ?? 0) + (p.failed ?? 0);
+                const elapsed = Date.now() / 1000 - job.started_at;
+                const rate = done > 0 ? done / elapsed : 0;
+                const left = rate > 0 && p.total ? (p.total - done) / rate : null;
+                const eta = left == null ? "" : left > 5400 ? `, about ${(left / 3600).toFixed(1)} h left` : `, about ${Math.ceil(left / 60)} min left`;
+                line += `<p class="hint">Running: ${done} of ${p.total ?? "?"} in this pass${eta}. Stopping is safe;
+                    files already hashed are kept and the next pass carries on from there.</p>`
+                    + (p.current ? `<p class="hint">Now: <code>${esc(p.current)}</code></p>` : "");
+            }
             $("hashStatus").innerHTML = line;
-            if (job && job.state === "running" && $("hashing").classList.contains("active")) setTimeout(loadHashing, 2000);
+            $("hashStart").style.display = running ? "none" : "";
+            $("hashCancel").style.display = running ? "" : "none";
+            if (running && $("hashing").classList.contains("active")) setTimeout(loadHashing, 2000);
         }
 
         $("hashStart").addEventListener("click", async () => {
@@ -614,7 +662,7 @@
             catch (e) { say("hashMessage", e.message, "error"); }
         });
         $("hashCancel").addEventListener("click", async () => {
-            try { await api("POST", "/api/hash/cancel"); say("hashMessage", "Cancelling.", "ok"); setTimeout(loadHashing, 500); }
+            try { await api("POST", "/api/hash/cancel"); say("hashMessage", "Stopping after the current file.", "ok"); setTimeout(loadHashing, 1500); }
             catch (e) { say("hashMessage", e.message, "error"); }
         });
 

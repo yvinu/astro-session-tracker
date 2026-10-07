@@ -192,7 +192,13 @@ def _m6_runs_and_artifacts(conn):
     """)
 
 
-MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies, _m4_sources, _m5_projects, _m6_runs_and_artifacts]
+def _m7_rig_camera_and_focal_range(conn):
+    for ddl in ("camera TEXT", "focal_min REAL", "focal_max REAL"):
+        _add_column(conn, "rigs", ddl)
+
+
+MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies, _m4_sources, _m5_projects, _m6_runs_and_artifacts,
+              _m7_rig_camera_and_focal_range]
 
 
 def migrate(conn):

@@ -25,7 +25,7 @@ def recompute(conn):
     updates = []
     status_counts = {vocabulary.RIG_ASSIGNED: 0, vocabulary.RIG_UNASSIGNED: 0, vocabulary.RIG_AMBIGUOUS: 0}
     for f in library_storage.get_files_for_vocabulary(conn):
-        rig_id, status = vocabulary.assign_rig(f["optical_train"], f["date"], rigs)
+        rig_id, status = vocabulary.assign_rig(f["optical_train"], f["date"], rigs, f["instrument"])
         canonical = vocabulary.canonical_filter(f["filter"], filter_map)
         status_counts[status] += 1
         if (rig_id, status, canonical) != (f["rig_id"], f["rig_status"], f["filter_canonical"]):
