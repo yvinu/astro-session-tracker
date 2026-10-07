@@ -206,6 +206,16 @@ def test_photoshop_run_with_only_notes_and_a_psd(env):
     assert [item["stored_relpath"] for item in summary["stored"]] == ["post/01_photoshop/m8.psd"]
 
 
+def test_named_tool_decides_the_run_kind_even_with_siril_logs_in_the_folder(env):
+    _checkout(env)
+    _process(env)
+    _checkin(env)
+    (env["working"] / "m8.psd").write_bytes(b"layers")
+    summary = _checkin(env, tool="photoshop")
+    assert summary["run"]["kind"] == "post"
+    assert [item["stored_relpath"] for item in summary["stored"]] == ["post/02_photoshop/m8.psd"]
+
+
 def test_checked_in_stack_traces_back_to_the_checked_out_subs(env):
     _checkout(env)
     _process(env)

@@ -75,7 +75,9 @@ def run(api, project_ref, folder, tool=None, run_kind=None, notes=None, stages=N
     # Guessed from everything in the folder, not only what is new: a restack
     # checked in after its log was already stored is still a Siril run.
     suggested_tool, suggested_kind = kinds.suggest_run([(i["relpath"].split("/")[-1], i["kind"]) for i in found])
-    run_kind = run_kind or suggested_kind
+    # A tool named by the user decides the kind of run; the folder's
+    # contents only decide it when no tool was named.
+    run_kind = run_kind or (kinds.run_kind_for_tool(tool) if tool else suggested_kind)
     tool = tool or suggested_tool
 
     for item in new:

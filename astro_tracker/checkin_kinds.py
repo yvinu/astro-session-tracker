@@ -88,6 +88,14 @@ def suggest_run(names_and_kinds):
     return "unknown", "post"
 
 
+STACKING_TOOLS = ("siril", "naztronomy", "stackingwizard", "wbpp", "deepskystacker", "astap")
+
+
+def run_kind_for_tool(tool):
+    """Whether a named tool makes a stacking run or a post-processing run."""
+    return "stacking" if str(tool or "").strip().lower() in STACKING_TOOLS else "post"
+
+
 def guess_frames(name):
     """The frame count a tool wrote into an output's name ("..._302x15sec_...", "..._732f.fits"), or None."""
     match = _FRAMES_BY_EXPOSURE.search(name) or _FRAMES_SUFFIX.search(name)

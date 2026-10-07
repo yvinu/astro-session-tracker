@@ -15,10 +15,13 @@ either a folder where the share is mounted, or an rsync remote.
 import json
 import os
 
-DEFAULT_PATH = os.path.join(os.path.expanduser("~"), ".config", "astro", "config.json")
+def default_path():
+    """The settings file: $ASTRO_CLI_CONFIG if set, else ~/.config/astro/config.json."""
+    return os.environ.get("ASTRO_CLI_CONFIG") or os.path.join(os.path.expanduser("~"), ".config", "astro", "config.json")
 
 
-def load(path=DEFAULT_PATH):
+def load(path=None):
+    path = path or default_path()
     try:
         with open(path) as f:
             return json.load(f)
@@ -26,7 +29,8 @@ def load(path=DEFAULT_PATH):
         return {}
 
 
-def save(settings, path=DEFAULT_PATH):
+def save(settings, path=None):
+    path = path or default_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         json.dump(settings, f, indent=2)
