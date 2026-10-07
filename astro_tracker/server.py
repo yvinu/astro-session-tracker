@@ -14,7 +14,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from astro_tracker import integration, scan_job, siril_export, storage
+from astro_tracker import config, integration, scan_job, siril_export, storage
 from astro_tracker.exporter import records_to_csv
 from astro_tracker.scanner import DEFAULT_DB_PATH
 
@@ -218,9 +218,18 @@ def cancel_scan():
 def recent_directories():
     conn = get_conn()
     try:
-        return {"directories": storage.get_recent_scan_directories(conn)}
+        recent = storage.get_recent_scan_directories(conn)
     finally:
         conn.close()
+    # Configured library roots come first: on the NAS there is no native
+    # folder picker, so these are how a scan target is chosen.
+    roots = [path for _name, path in config.library_roots()]
+    return {"directories": roots + [d for d in recent if d not in roots]}
+
+
+@app.get("/api/library-roots")
+def library_roots():
+    return {"roots": [{"name": name, "path": path} for name, path in config.library_roots()]}
 
 
 BROWSE_FOLDER_PROMPTS = {
@@ -251,6 +260,10 @@ def browse_folder(body: BrowseFolderRequest = BrowseFolderRequest()):
             ["osascript", "-e", script],
             capture_output=True, text=True, timeout=300,
         )
+    except FileNotFoundError:
+        # Not macOS (e.g. the container on the NAS): no native picker. The
+        # scan page falls back to configured roots and a typed path.
+        return {"directory": None, "unavailable": True}
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=408, detail="Folder picker timed out")
 

@@ -93,21 +93,9 @@ def connect(db_path):
 
 
 def init_schema(conn):
-    conn.executescript(SCHEMA_SQL)
-    for ddl in (
-        "ALTER TABLE files ADD COLUMN target_group_id INTEGER REFERENCES target_groups(id)",
-        "ALTER TABLE files ADD COLUMN session_id INTEGER REFERENCES sessions(id)",
-        "ALTER TABLE files ADD COLUMN location TEXT",
-        "ALTER TABLE files ADD COLUMN resolution TEXT",
-        "ALTER TABLE files ADD COLUMN binning TEXT",
-        "ALTER TABLE files ADD COLUMN optical_train TEXT",
-        "ALTER TABLE files ADD COLUMN duplicate_group_id INTEGER REFERENCES duplicate_groups(id)",
-    ):
-        try:
-            conn.execute(ddl)
-        except sqlite3.OperationalError:
-            pass  # column already exists on a previously-initialized database
-    conn.commit()
+    """Bring the database up to the current schema (see migrations.py) and backfill Location."""
+    from astro_tracker import migrations
+    migrations.migrate(conn)
     _backfill_locations(conn)
 
 
