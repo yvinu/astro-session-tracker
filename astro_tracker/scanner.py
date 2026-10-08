@@ -38,7 +38,12 @@ def find_image_files(directory):
 def scan_directory(directory, db_path, error_log_path=None, progress_callback=None, should_stop=None, force=False):
     """Incrementally scan `directory` into the SQLite database at `db_path`.
 
-    Returns a dict of counts: new, updated, skipped, failed, total_seen, cancelled.
+    Returns a dict of counts: new, updated, skipped, failed, links, total_seen, cancelled.
+
+    Symbolic links are counted under "links" and otherwise ignored, whether
+    or not their target exists: a File is one physical copy, and a link is
+    not one. Siril's `link` leaves thousands of them in `process` folders,
+    usually pointing at paths that no longer exist.
 
     If `should_stop` is given, it's checked before each file; when it
     returns True, the walk stops early. Whatever's already been upserted
@@ -59,7 +64,7 @@ def scan_directory(directory, db_path, error_log_path=None, progress_callback=No
 
     scan_run_id = storage.start_scan_run(conn, directory)
 
-    counts = {"new": 0, "updated": 0, "skipped": 0, "failed": 0, "total_seen": 0, "cancelled": False}
+    counts = {"new": 0, "updated": 0, "skipped": 0, "failed": 0, "links": 0, "total_seen": 0, "cancelled": False}
 
     for file_path in find_image_files(directory):
         if should_stop is not None and should_stop():
@@ -67,6 +72,12 @@ def scan_directory(directory, db_path, error_log_path=None, progress_callback=No
             break
 
         counts["total_seen"] += 1
+
+        if os.path.islink(file_path):
+            counts["links"] += 1
+            if progress_callback:
+                progress_callback(counts, file_path, "links")
+            continue
 
         try:
             stat = os.stat(file_path)
@@ -243,6 +254,7 @@ def main():
     print(f"   New files:     {counts['new']}")
     print(f"   Updated files: {counts['updated']}")
     print(f"   Unchanged (skipped): {counts['skipped']}")
+    print(f"   Links (ignored): {counts['links']}")
     print(f"   Failed:        {counts['failed']}")
 
     if counts["failed"] > 0:

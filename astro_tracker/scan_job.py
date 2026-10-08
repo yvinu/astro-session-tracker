@@ -38,7 +38,7 @@ class ScanJob:
         self.db_path = db_path
         self.force = force
         self.state = STATE_RUNNING
-        self.counts = {"new": 0, "updated": 0, "skipped": 0, "failed": 0, "total_seen": 0, "cancelled": False}
+        self.counts = {"new": 0, "updated": 0, "skipped": 0, "failed": 0, "links": 0, "total_seen": 0, "cancelled": False}
         self.failures = []
         self.library_summary = None
         self.cluster_summary = None
