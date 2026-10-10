@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FITS Studio & Header Analysis Suite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --bg-card: rgba(22, 29, 44, 0.75);
+            --bg-card-hover: rgba(30, 41, 62, 0.85);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(124, 58, 237, 0.4);
+            --purple-accent: #8b5cf6;
+            --cyan-accent: #06b6d4;
+            --emerald-accent: #10b981;
+            --amber-accent: #f59e0b;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- Header & Tab Navigation --- */
+        header {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 40px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            background: linear-gradient(135deg, var(--purple-accent), var(--cyan-accent));
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+        }
+
+        .brand-title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background: var(--purple-accent);
+            color: white;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            flex: 1;
+            padding: 30px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Tab 1: Runner Styles --- */
+        .card-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-field {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-field:focus {
+            border-color: var(--cyan-accent);
+        }
+
+        .options-row {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 20px;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 14px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            accent-color: var(--purple-accent);
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-run {
+            background: linear-gradient(135deg, var(--purple-accent), var(--cyan-accent));
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-run:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .stat-box .num {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--cyan-accent);
+        }
+
+        .stat-box .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* --- Tab 2: Dictionary UI --- */
+        .dict-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 30px;
+        }
+
+        .dict-sidebar {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .filter-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 450px;
+            overflow-y: auto;
+        }
+
+        .filter-btn {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--purple-accent);
+        }
+
+        .dict-cards-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .concept-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+        }
+
+        .concept-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .concept-name {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .concept-tag {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .synonyms-subgrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .syn-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .syn-card-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--cyan-accent);
+            margin-bottom: 4px;
+        }
+
+        .pub-chip {
+            font-size: 11px;
+            background: rgba(16, 185, 129, 0.15);
+            color: #6ee7b7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-right: 4px;
+            margin-top: 4px;
+        }
+
+        /* --- Tab 3: Graph Explorer --- */
+        #graphCanvas {
+            width: 100%;
+            height: calc(100vh - 200px);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            background: #0b0f19;
+        }
+
+        .graph-overlay {
+            position: absolute;
+            top: 100px;
+            left: 60px;
+            z-index: 10;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            padding: 12px 18px;
+            border-radius: 10px;
+        }
+
+        /* Results table */
+        table.results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        table.results-table th, table.results-table td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        table.results-table th {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        /* --- Folder Picker & Preset Styles --- */
+        .preset-chips {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .preset-chip {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-chip:hover {
+            color: var(--cyan-accent);
+            border-color: var(--cyan-accent);
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        .btn-secondary {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(51, 65, 85, 0.9);
+            border-color: var(--cyan-accent);
+            color: var(--cyan-accent);
+        }
+
+        /* --- Live Progress & Completion Indicators --- */
+        .progress-card {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--border-highlight);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(124, 58, 237, 0.15);
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .progress-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .progress-badge {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-running {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--purple-accent);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            animation: pulseGlow 1.5s infinite;
+        }
+
+        .badge-completed {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--emerald-accent);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .badge-failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.6; box-shadow: 0 0 4px rgba(139, 92, 246, 0.2); }
+            50% { opacity: 1; box-shadow: 0 0 12px rgba(139, 92, 246, 0.6); }
+            100% { opacity: 0.6; box-shadow: 0 0 4px rgba(139, 92, 246, 0.2); }
+        }
+
+        .progress-track {
+            background: rgba(30, 41, 59, 0.8);
+            height: 16px;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--purple-accent), var(--cyan-accent));
+            border-radius: 8px;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+        }
+
+        .progress-fill.completed {
+            background: linear-gradient(90deg, #10b981, #059669);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+        }
+
+        .completion-banner {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #a7f3d0;
+            padding: 14px 20px;
+            border-radius: 12px;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <span class="brand-logo">FITS STUDIO</span>
+            <span class="brand-title">Header Analysis & Dictionary Suite</span>
+        </div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('tabRunner', this)">
+                ⚡ <span>1. Scan & Runner</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabDictionary', this)">
+                📖 <span>2. Interactive Dictionary</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabGraph', this)">
+                🌌 <span>3. Graph Explorer</span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- TAB 1: RUNNER -->
+        <div id="tabRunner" class="tab-content active">
+            <input type="file" id="webkitFolderInput" webkitdirectory style="display:none;" onchange="handleWebkitFolderSelect(this)">
+
+            <div class="card-panel">
+                <div class="panel-title">📁 FITS Header Analysis Launcher</div>
+                <div class="form-grid" style="grid-template-columns: 1fr auto auto; align-items: flex-end;">
+                    <div class="input-group">
+                        <label>Target Directory Path</label>
+                        <input type="text" id="scanDirInput" class="input-field" value="/Users/yvinu/Documents/AP" placeholder="/path/to/fits/folder">
+                        <div class="preset-chips">
+                            <span style="font-size: 11px; color: var(--text-muted); align-self: center;">Presets:</span>
+                            <button type="button" class="preset-chip" onclick="setPresetPath('/Users/yvinu/Documents/AP')">📁 AP Images</button>
+                            <button type="button" class="preset-chip" onclick="setPresetPath('/Users/yvinu/Automation/FITS_Report')">📁 FITS Report Workspace</button>
+                            <button type="button" class="preset-chip" onclick="setPresetPath('/Volumes/')">📁 External Drives (/Volumes/)</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-secondary" onclick="browseNativeFolder()" title="Open native macOS OS Folder Dialog">
+                            📁 Browse OS Folder...
+                        </button>
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('webkitFolderInput').click()" title="Select local directory via Browser Picker">
+                            📂 Select Folder...
+                        </button>
+                    </div>
+                    <div>
+                        <button id="btnRunAnalysis" class="btn-run" onclick="runAnalysis()">
+                            ▶ Run Header Analysis
+                        </button>
+                    </div>
+                </div>
+
+                <div class="options-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="chkIgnoreSymlinks" checked>
+                        Ignore Symbolic Links (Default)
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="chkUpdateGraph" checked>
+                        Update Cumulative Graph DB
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                        <label>Min Combo % Threshold:</label>
+                        <input type="number" id="minPctInput" class="input-field" value="1.0" step="0.5" style="width: 70px; padding: 6px 10px;">
+                    </div>
+                    <button onclick="resetCorpus()" style="margin-left: auto; background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">
+                        ⚠️ Reset Corpus (Start Fresh)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Scanner Progress Section -->
+            <div id="progressCard" class="progress-card">
+                <div class="progress-header">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span id="progressBadge" class="progress-badge badge-running">⚡ RUNNING ANALYSIS</span>
+                        <span id="progressStatusMsg" style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Scanning FITS headers...</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <span id="progressTimer" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-secondary);">⏱️ 00:00</span>
+                        <span id="progressCounter" style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--cyan-accent);">0 / 0 files (0.0%)</span>
+                    </div>
+                </div>
+                <div class="progress-track">
+                    <div id="progressBarFill" class="progress-fill"></div>
+                </div>
+                <div id="progressCurrentFile" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    Initializing header scanner...
+                </div>
+                <div id="completionBanner" class="completion-banner" style="display: none;">
+                    <span style="font-size: 18px;">🎉</span>
+                    <div>
+                        <strong style="color: white;">Analysis Complete!</strong> Scanned <span id="bannerProcessedCount">0</span> FITS headers in <span id="bannerElapsedSec">0</span>s. Graph DB & Dictionary refreshed.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Box -->
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="num" id="statFiles">1,019</div>
+                    <div class="label">Total Image Files</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num" id="statProcessed" style="color: var(--emerald-accent);">876</div>
+                    <div class="label">Processed Valid FITS</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num" id="statSignatures" style="color: var(--purple-accent);">85</div>
+                    <div class="label">Field Signatures</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num" id="statPublishers" style="color: var(--amber-accent);">7</div>
+                    <div class="label">Publishers Detected</div>
+                </div>
+            </div>
+
+            <!-- Top Signatures Table -->
+            <div class="card-panel">
+                <div class="panel-title">🏆 Top Header Combination Signatures</div>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Files</th>
+                            <th>Coverage</th>
+                            <th>Field Count</th>
+                            <th>Header Key Manifest</th>
+                        </tr>
+                    </thead>
+                    <tbody id="signaturesTbody">
+                        <tr>
+                            <td>#1</td>
+                            <td>454</td>
+                            <td>51.83%</td>
+                            <td>35</td>
+                            <td><code>APERTURE, BAYERPAT, BSCALE, BZERO, CCD-TEMP, CCDXBIN, CCDYBIN, CREATOR, DATE-OBS, DEC, EXPTIME, GAIN, INSTRUME, OBJECT, RA...</code></td>
+                        </tr>
+                        <tr>
+                            <td>#2</td>
+                            <td>73</td>
+                            <td>8.33%</td>
+                            <td>32</td>
+                            <td><code>BAYERPAT, BSCALE, BZERO, CCD-TEMP, CCDXBIN, CCDYBIN, COMMENT, CREATOR, DATE-OBS, DEC, EGAIN, EXPOSURE, GAIN, INSTRUME...</code></td>
+                        </tr>
+                        <tr>
+                            <td>#3</td>
+                            <td>66</td>
+                            <td>7.53%</td>
+                            <td>48</td>
+                            <td><code>AIRMASS, APTDIA, CCD-TEMP, CDELT1, CDELT2, CROTA1, CROTA2, CRPIX1, CRPIX2, CRVAL1, CRVAL2, CTYPE1, CTYPE2, EQUINOX...</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 2: INTERACTIVE DICTIONARY -->
+        <div id="tabDictionary" class="tab-content">
+            <div class="dict-container">
+                <div class="dict-sidebar">
+                    <div class="search-box">
+                        <input type="text" id="dictSearch" placeholder="Search card (DET-TEMP), concept..." oninput="filterDict()">
+                    </div>
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Filter Publisher</div>
+                    <div class="filter-list" id="pubFilterList">
+                        <div class="filter-btn active" onclick="setDictPubFilter('ALL')">All Publishers</div>
+                        <div class="filter-btn" onclick="setDictPubFilter('DWARFLAB')">DWARFLAB</div>
+                        <div class="filter-btn" onclick="setDictPubFilter('ZWO ASIAIR')">ZWO ASIAIR</div>
+                        <div class="filter-btn" onclick="setDictPubFilter('Seestar S50')">Seestar S50</div>
+                        <div class="filter-btn" onclick="setDictPubFilter('N.I.N.A.')">N.I.N.A.</div>
+                        <div class="filter-btn" onclick="setDictPubFilter('Siril')">Siril</div>
+                        <div class="filter-btn" onclick="setDictPubFilter('PixInsight')">PixInsight</div>
+                    </div>
+                </div>
+
+                <div class="dict-cards-grid" id="dictCardsContainer">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: GRAPH EXPLORER -->
+        <div id="tabGraph" class="tab-content">
+            <div style="position: relative;">
+                <div class="graph-overlay">
+                    <div style="font-size: 13px; font-weight: 700; color: #f0f6fc;">🌌 KùzuDB Property Graph</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Nodes: Canonical Concepts (Purple) | Header Cards (Blue) | Publishers (Green)</div>
+                </div>
+                <div id="graphCanvas"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Seed dictionary data (supplemented dynamically from API)
+        let dictionaryData = {
+            "exposure": { display_name: "Exposure Time (s)", data_type: "float", default: 0.0, synonyms: [ { card: "EXPTIME", publishers: ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril", "DWARFLAB"] }, { card: "EXPOSURE", publishers: ["MaxIm DL", "PixInsight"] } ] },
+            "gain": { display_name: "Gain / Sensitivity", data_type: "str", default: "N/A", synonyms: [ { card: "GAIN", publishers: ["N.I.N.A.", "ZWO ASIAIR", "DWARFLAB", "Seestar S50"] }, { card: "EGAIN", publishers: ["ZWO ASIAIR", "Siril"] }, { card: "ISO", publishers: ["DSLR"] } ] },
+            "sensor_temp": { display_name: "Sensor Temperature (°C)", data_type: "float", default: "N/A", synonyms: [ { card: "CCD-TEMP", publishers: ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril"] }, { card: "DET-TEMP", publishers: ["DWARFLAB"] } ] },
+            "target_name": { display_name: "Target Object Name", data_type: "str", default: "Unknown", synonyms: [ { card: "OBJECT", publishers: ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "DWARFLAB", "Siril"] } ] },
+            "frame_type": { display_name: "Frame Type", data_type: "str", default: "Unknown", synonyms: [ { card: "IMAGETYP", publishers: ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "PixInsight"] }, { card: "FRAME", publishers: ["DWARFLAB", "Siril"] } ] },
+            "instrument": { display_name: "Camera / Instrument Model", data_type: "str", default: "Unknown", synonyms: [ { card: "INSTRUME", publishers: ["N.I.N.A.", "ZWO ASIAIR", "Seestar S50", "Siril"] }, { card: "CAMERA", publishers: ["DWARFLAB"] }, { card: "CAMNAME", publishers: ["DWARFLAB"] } ] }
+        };
+
+        let currentDictPub = 'ALL';
+        let graphInitialized = false;
+        let pollInterval = null;
+        let startTime = null;
+        let timerInterval = null;
+
+        // Dynamic API Base URL resolution (supports both file:// and http:// origins)
+        const API_BASE = (window.location.protocol === 'file:' || !window.location.host || window.location.origin === 'null')
+            ? 'http://127.0.0.1:8000'
+            : '';
+
+        function switchTab(tabId, btnEl) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            btnEl.classList.add('active');
+
+            if (tabId === 'tabDictionary') {
+                renderDictionary();
+            } else if (tabId === 'tabGraph' && !graphInitialized) {
+                initGraphNetwork();
+                graphInitialized = true;
+            }
+        }
+
+        // Folder Picker Helpers
+        function setPresetPath(path) {
+            document.getElementById("scanDirInput").value = path;
+        }
+
+        function browseNativeFolder() {
+            fetch(`${API_BASE}/api/browse-folder`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ purpose: 'scan' })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (data && data.directory) {
+                    document.getElementById('scanDirInput').value = data.directory;
+                }
+            })
+            .catch(err => {
+                console.warn("Native OS browse-folder API unavailable, using browser picker fallback:", err);
+                document.getElementById('webkitFolderInput').click();
+            });
+        }
+
+        function handleWebkitFolderSelect(input) {
+            if (!input.files || input.files.length === 0) return;
+            const firstFile = input.files[0];
+            const relPath = firstFile.webkitRelativePath;
+            if (relPath) {
+                const topFolder = relPath.split('/')[0];
+                const currentInput = document.getElementById('scanDirInput').value;
+                if (!currentInput || !currentInput.includes(topFolder)) {
+                    document.getElementById('scanDirInput').value = "/Users/yvinu/Documents/" + topFolder;
+                }
+            }
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // Runner & Live Progress Tracking
+        function runAnalysis() {
+            const dir = document.getElementById("scanDirInput").value.trim();
+            if (!dir) {
+                alert("Please specify a target directory path.");
+                return;
+            }
+
+            const ignoreSymlinks = document.getElementById("chkIgnoreSymlinks").checked;
+            const updateGraph = document.getElementById("chkUpdateGraph").checked;
+            const minComboPct = parseFloat(document.getElementById("minPctInput").value) || 1.0;
+
+            const btnRun = document.getElementById("btnRunAnalysis");
+            btnRun.disabled = true;
+            btnRun.innerHTML = `⏳ Processing...`;
+
+            // Reset and reveal progress card
+            const card = document.getElementById("progressCard");
+            card.style.display = "block";
+            document.getElementById("progressBadge").className = "progress-badge badge-running";
+            document.getElementById("progressBadge").innerText = "⚡ RUNNING ANALYSIS";
+            document.getElementById("progressStatusMsg").innerText = `Scanning headers in ${dir}...`;
+            document.getElementById("progressCounter").innerText = "0 / 0 files (0.0%)";
+            document.getElementById("progressBarFill").style.width = "0%";
+            document.getElementById("progressBarFill").classList.remove("completed");
+            document.getElementById("progressCurrentFile").innerText = "Initializing scan job...";
+            document.getElementById("completionBanner").style.display = "none";
+
+            startTime = Date.now();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const elapsedSec = (Date.now() - startTime) / 1000;
+                document.getElementById("progressTimer").innerText = `⏱️ ${formatTime(elapsedSec)}`;
+            }, 500);
+
+            fetch(`${API_BASE}/api/header-analysis/start`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    directory: dir,
+                    ignore_symlinks: ignoreSymlinks,
+                    min_combo_pct: minComboPct,
+                    update_graph: updateGraph
+                })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Failed to start analysis"); });
+                return res.json();
+            })
+            .then(data => {
+                if (pollInterval) clearInterval(pollInterval);
+                pollInterval = setInterval(pollHeaderAnalysisStatus, 400);
+            })
+            .catch(err => {
+                clearInterval(timerInterval);
+                btnRun.disabled = false;
+                btnRun.innerHTML = `▶ Run Header Analysis`;
+                document.getElementById("progressBadge").className = "progress-badge badge-failed";
+                document.getElementById("progressBadge").innerText = "❌ START ERROR";
+                let errMsg = err.message || "Failed to connect to API server";
+                if (errMsg.includes("Load failed") || errMsg.includes("Failed to fetch")) {
+                    errMsg = "Could not connect to API server at " + (API_BASE || 'http://127.0.0.1:8000') + ". Please ensure server is running (python fits_dictionary_cli.py --studio).";
+                }
+                document.getElementById("progressCurrentFile").innerText = errMsg;
+            });
+        }
+
+        function pollHeaderAnalysisStatus() {
+            fetch(`${API_BASE}/api/header-analysis/status`)
+                .then(res => res.json())
+                .then(state => {
+                    const pct = state.progress_pct || 0;
+                    document.getElementById("progressBarFill").style.width = `${pct}%`;
+                    document.getElementById("progressCounter").innerText = `${state.processed || 0} / ${state.total || 0} files (${pct}%)`;
+                    if (state.current_file) {
+                        document.getElementById("progressCurrentFile").innerText = `File: ${state.current_file}`;
+                    }
+
+                    if (state.status === "completed") {
+                        clearInterval(pollInterval);
+                        clearInterval(timerInterval);
+                        pollInterval = null;
+
+                        const btnRun = document.getElementById("btnRunAnalysis");
+                        btnRun.disabled = false;
+                        btnRun.innerHTML = `▶ Run Header Analysis`;
+
+                        const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
+                        document.getElementById("progressBarFill").style.width = "100%";
+                        document.getElementById("progressBarFill").classList.add("completed");
+                        document.getElementById("progressBadge").className = "progress-badge badge-completed";
+                        document.getElementById("progressBadge").innerText = "✅ ANALYSIS COMPLETE";
+                        document.getElementById("progressStatusMsg").innerText = "Header analysis & DB update finished!";
+                        document.getElementById("progressCurrentFile").innerText = "All headers processed into cumulative database.";
+
+                        // Show completion banner
+                        document.getElementById("bannerProcessedCount").innerText = (state.processed || 0).toLocaleString();
+                        document.getElementById("bannerElapsedSec").innerText = elapsedSec;
+                        document.getElementById("completionBanner").style.display = "flex";
+
+                        if (state.results) {
+                            updateDashboardResults(state.results);
+                        }
+                        fetchLatestDictionary();
+                    } else if (state.status === "failed") {
+                        clearInterval(pollInterval);
+                        clearInterval(timerInterval);
+                        pollInterval = null;
+
+                        const btnRun = document.getElementById("btnRunAnalysis");
+                        btnRun.disabled = false;
+                        btnRun.innerHTML = `▶ Run Header Analysis`;
+
+                        document.getElementById("progressBadge").className = "progress-badge badge-failed";
+                        document.getElementById("progressBadge").innerText = "❌ FAILED";
+                        document.getElementById("progressStatusMsg").innerText = "Header analysis error";
+                        document.getElementById("progressCurrentFile").innerText = state.error || "Unknown error";
+                    }
+                })
+                .catch(err => {
+                    console.error("Status check failed:", err);
+                });
+        }
+
+        function updateDashboardResults(results) {
+            if (!results) return;
+
+            // 1. Stats Grid
+            document.getElementById("statFiles").innerText = (results.total_files || 0).toLocaleString();
+            document.getElementById("statProcessed").innerText = (results.processed_files || 0).toLocaleString();
+            const sigCount = results.total_signatures || (results.unique_combinations ? results.unique_combinations.length : 0);
+            document.getElementById("statSignatures").innerText = sigCount.toLocaleString();
+            const pubCount = results.software_publishers ? results.software_publishers.length : 0;
+            document.getElementById("statPublishers").innerText = pubCount.toLocaleString();
+
+            // 2. Top Signatures Table
+            const tbody = document.getElementById("signaturesTbody");
+            if (tbody && results.unique_combinations && results.unique_combinations.length > 0) {
+                tbody.innerHTML = "";
+                results.unique_combinations.forEach((uc, idx) => {
+                    const row = document.createElement("tr");
+                    const fieldsSnippet = (uc.fields || []).join(", ");
+                    row.innerHTML = `
+                        <td>#${idx + 1} (${uc.combo_id})</td>
+                        <td>${uc.file_count}</td>
+                        <td>${uc.percentage}%</td>
+                        <td>${uc.field_count}</td>
+                        <td><code>${fieldsSnippet}</code></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        function fetchLatestDictionary() {
+            fetch(`${API_BASE}/api/fits-dictionary`)
+                .then(res => res.json())
+                .then(dict => {
+                    if (dict && Object.keys(dict).length > 0) {
+                        dictionaryData = dict;
+                        renderDictionary();
+                        if (graphInitialized) {
+                            initGraphNetwork();
+                        }
+                    }
+                })
+                .catch(err => console.log("Note: using seed dictionary"));
+        }
+
+        function resetCorpus() {
+            if (confirm("⚠️ Are you sure you want to reset the corpus?\n\nThis will clear all cumulative scan history, property graph databases, and custom card entries, returning the dictionary to its clean seed state.")) {
+                fetch(`${API_BASE}/api/corpus/reset`, { method: "POST" })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert("🔄 Corpus reset successfully!");
+                        location.reload();
+                    })
+                    .catch(() => alert("🔄 Corpus reset signal sent. Re-run CLI or scanner to start fresh."));
+            }
+        }
+
+        // Dictionary Render
+        function setDictPubFilter(pub) {
+            currentDictPub = pub;
+            document.querySelectorAll('#pubFilterList .filter-btn').forEach(el => {
+                el.classList.toggle('active', el.innerText.trim() === pub || (pub === 'ALL' && el.innerText.includes('All')));
+            });
+            renderDictionary();
+        }
+
+        function filterDict() {
+            renderDictionary();
+        }
+
+        function renderDictionary() {
+            const container = document.getElementById('dictCardsContainer');
+            const query = document.getElementById('dictSearch').value.toLowerCase().trim();
+            container.innerHTML = '';
+
+            for (const [concept, info] of Object.entries(dictionaryData)) {
+                let syns = info.synonyms || [];
+                if (currentDictPub !== 'ALL') {
+                    syns = syns.filter(s => (s.publishers || []).includes(currentDictPub));
+                    if (syns.length === 0) continue;
+                }
+
+                if (query) {
+                    const matchesKey = concept.toLowerCase().includes(query);
+                    const matchesDisp = (info.display_name || '').toLowerCase().includes(query);
+                    const matchesCard = syns.some(s => s.card.toLowerCase().includes(query));
+                    if (!matchesKey && !matchesDisp && !matchesCard) continue;
+                }
+
+                const cardEl = document.createElement('div');
+                cardEl.className = 'concept-item';
+
+                let synsHtml = '';
+                syns.forEach(s => {
+                    const pubs = (s.publishers || []).map(p => `<span class="pub-chip">${p}</span>`).join('');
+                    synsHtml += `
+                        <div class="syn-card">
+                            <div class="syn-card-title">${s.card}</div>
+                            <div>${pubs}</div>
+                        </div>
+                    `;
+                });
+
+                cardEl.innerHTML = `
+                    <div class="concept-item-header">
+                        <div class="concept-name">${info.display_name}</div>
+                        <span class="concept-tag">${concept}</span>
+                    </div>
+                    <div class="synonyms-subgrid">${synsHtml}</div>
+                `;
+                container.appendChild(cardEl);
+            }
+        }
+
+        // Vis-Network Graph Initialization
+        function initGraphNetwork() {
+            const container = document.getElementById('graphCanvas');
+            const nodes = [];
+            const edges = [];
+
+            for (const [concept, info] of Object.entries(dictionaryData)) {
+                const cId = "concept:" + concept;
+                nodes.push({ id: cId, label: concept, color: "#8b5cf6", shape: "ellipse", font: { color: "#ffffff" } });
+
+                (info.synonyms || []).forEach(syn => {
+                    const cardId = "card:" + syn.card;
+                    if (!nodes.some(n => n.id === cardId)) {
+                        nodes.push({ id: cardId, label: syn.card, color: "#06b6d4", shape: "box", font: { color: "#ffffff" } });
+                    }
+                    edges.push({ from: cardId, to: cId, label: "MAPS_TO", color: "rgba(6, 182, 212, 0.4)" });
+
+                    (syn.publishers || []).forEach(pub => {
+                        const pubId = "pub:" + pub;
+                        if (!nodes.some(n => n.id === pubId)) {
+                            nodes.push({ id: pubId, label: pub, color: "#10b981", shape: "diamond", font: { color: "#ffffff" } });
+                        }
+                        edges.push({ from: cardId, to: pubId, label: "WRITTEN_BY", color: "rgba(16, 185, 129, 0.4)" });
+                    });
+                });
+            }
+
+            const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+            const options = {
+                physics: { solver: 'forceAtlas2Based', forceAtlas2Based: { springLength: 100 } }
+            };
+            new vis.Network(container, data, options);
+        }
+
+        // Initial render & fetch latest dictionary
+        fetchLatestDictionary();
+    </script>
+</body>
+</html>

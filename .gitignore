@@ -4,6 +4,9 @@ fits_analysis_errors.log
 *.db
 *.sqlite
 *.sqlite3
+*.kuzu_db
+*.kuzu_db*
+*.wal
 
 # Python
 __pycache__/
@@ -14,3 +17,6 @@ venv/
 
 # OS
 .DS_Store
+
+# NAS deployment bundle (built with git archive)
+astro-nas-deploy.tar.gz

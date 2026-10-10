@@ -93,21 +93,9 @@ def connect(db_path):
 
 
 def init_schema(conn):
-    conn.executescript(SCHEMA_SQL)
-    for ddl in (
-        "ALTER TABLE files ADD COLUMN target_group_id INTEGER REFERENCES target_groups(id)",
-        "ALTER TABLE files ADD COLUMN session_id INTEGER REFERENCES sessions(id)",
-        "ALTER TABLE files ADD COLUMN location TEXT",
-        "ALTER TABLE files ADD COLUMN resolution TEXT",
-        "ALTER TABLE files ADD COLUMN binning TEXT",
-        "ALTER TABLE files ADD COLUMN optical_train TEXT",
-        "ALTER TABLE files ADD COLUMN duplicate_group_id INTEGER REFERENCES duplicate_groups(id)",
-    ):
-        try:
-            conn.execute(ddl)
-        except sqlite3.OperationalError:
-            pass  # column already exists on a previously-initialized database
-    conn.commit()
+    """Bring the database up to the current schema (see migrations.py) and backfill Location."""
+    from astro_tracker import migrations
+    migrations.migrate(conn)
     _backfill_locations(conn)
 
 
@@ -542,18 +530,30 @@ def get_files_for_target_group(conn, target_group_id, exclude_ids=None):
 
 
 def get_files_for_siril_export(conn, target_group_id):
-    """Return path/frame_type/filter/target for every file in a target group.
+    """Return path/filter/target/camera info for a target group's Light frames.
 
-    Feeds siril_export.build_working_folder -- needs the raw file path
-    (to symlink) and target (to name the working folder), unlike
-    get_files_for_target_group which is scoped to the integration calculator.
+    Feeds siril_export.build_lights_export -- needs the raw source path (to
+    copy), target (to name the working folder), and optical_train/instrument
+    (to keep different cameras/filters from being copied into the same
+    lights/ folder). Only frame_type == "Light" is returned; calibration
+    frames aren't part of this export. Unlike get_files_for_target_group,
+    which is scoped to the integration calculator.
     """
     rows = conn.execute(
-        "SELECT path, frame_type, filter, target FROM files WHERE target_group_id = ?",
+        """SELECT path, frame_type, filter, target, optical_train, instrument
+           FROM files WHERE target_group_id = ? AND frame_type = 'Light'
+           ORDER BY path""",
         (target_group_id,),
     ).fetchall()
     return [
-        {"path": row["path"], "frame_type": row["frame_type"], "filter": row["filter"], "target": row["target"]}
+        {
+            "path": row["path"],
+            "frame_type": row["frame_type"],
+            "filter": row["filter"],
+            "target": row["target"],
+            "optical_train": row["optical_train"],
+            "instrument": row["instrument"],
+        }
         for row in rows
     ]
 

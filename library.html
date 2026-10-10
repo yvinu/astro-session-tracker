@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --bg-tertiary: #252b3b;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #8b5cf6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --border-color: #374151;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1f2e 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        header {
+            margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 2px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;
+        }
+
+        h1 {
+            font-size: 2rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        h2 { font-size: 1.15rem; margin-bottom: 0.75rem; }
+        h3 { font-size: 1rem; margin: 1rem 0 0.5rem; color: var(--text-secondary); font-weight: 600; }
+        p.hint { color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.5; }
+
+        .nav-link { color: var(--accent-primary); text-decoration: none; font-size: 0.9rem; margin-left: 1rem; }
+        .nav-link:hover { text-decoration: underline; }
+
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+        .tab {
+            background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-secondary);
+            padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font: inherit; font-size: 0.9rem;
+        }
+        .tab.active { background: var(--accent-primary); color: white; border-color: var(--accent-primary); }
+
+        .card {
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        th { text-align: left; color: var(--text-secondary); font-weight: 500; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border-color); }
+        td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--bg-tertiary); vertical-align: top; }
+        td code { overflow-wrap: anywhere; }
+        td.num, th.num { text-align: right; white-space: nowrap; }
+
+        input, select, textarea {
+            background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary);
+            border-radius: 6px; padding: 0.45rem 0.6rem; font: inherit; font-size: 0.875rem; width: 100%;
+        }
+        label { display: block; font-size: 0.8rem; color: var(--text-secondary); margin: 0.6rem 0 0.25rem; }
+        .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+        .checks label { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0.2rem 1rem 0.2rem 0; color: var(--text-primary); font-size: 0.875rem; }
+        .checks input { width: auto; }
+
+        button {
+            background: var(--accent-primary); color: white; border: none; border-radius: 6px;
+            padding: 0.45rem 0.9rem; font: inherit; font-size: 0.85rem; cursor: pointer;
+        }
+        button.secondary { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); }
+        button.danger { background: transparent; border: 1px solid var(--accent-danger); color: var(--accent-danger); }
+        button:disabled { opacity: 0.5; cursor: default; }
+        .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.9rem; }
+
+        .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.75rem; border: 1px solid var(--border-color); }
+        .badge.ok { color: var(--accent-success); border-color: var(--accent-success); }
+        .badge.warn { color: var(--accent-warning); border-color: var(--accent-warning); }
+        .badge.bad { color: var(--accent-danger); border-color: var(--accent-danger); }
+
+        .message { margin-top: 0.75rem; font-size: 0.875rem; min-height: 1.2em; }
+        .message.error { color: var(--accent-danger); }
+        .message.ok { color: var(--accent-success); }
+        code { background: var(--bg-tertiary); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.8rem; }
+        .muted { color: var(--text-secondary); }
+        section { display: none; }
+        section.active { display: block; }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Library Manager</h1>
+            <div>
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link" href="/scan">Scan</a>
+                <a class="nav-link" href="/studio">Studio</a>
+            </div>
+        </header>
+
+        <div class="tabs" id="tabs"></div>
+
+        <section id="sources">
+            <div class="card">
+                <h2>Sources</h2>
+                <p class="hint">A Source mirrors a device share into a permanent folder on the NAS. A pull copies what
+                    the mirror is missing and never overwrites, deletes, or writes to the device.</p>
+                <div id="sourcesTable"></div>
+                <div class="message" id="sourcesMessage"></div>
+            </div>
+            <div class="card">
+                <h2 id="sourceFormTitle">Add a Source</h2>
+                <div class="row">
+                    <div><label>Name</label><input id="srcName" placeholder="S50"></div>
+                    <div><label>Profile</label><select id="srcProfile"></select></div>
+                    <div><label>Device address for ping (optional)</label><input id="srcHost" placeholder="192.168.x.x"></div>
+                </div>
+                <label>Device folder as mounted on the NAS</label>
+                <input id="srcDir" placeholder="/devices/EMMC Images (anonymous@...)/MyWorks">
+                <label>Mirror folder in the library</label>
+                <input id="srcMirror" placeholder="/library/SeestarMyWorks">
+                <div class="row">
+                    <div><label>Pull every (minutes; 0 = manual only)</label><input id="srcInterval" type="number" min="0" value="60"></div>
+                    <div><label>Leave files newer than (seconds)</label><input id="srcStability" type="number" min="0" value="600"></div>
+                    <div class="checks"><label style="margin-top:1.6rem"><input id="srcEnabled" type="checkbox" checked> Enabled</label></div>
+                </div>
+                <div class="actions">
+                    <button id="srcSave">Save Source</button>
+                    <button class="secondary" id="srcReset">Clear form</button>
+                </div>
+                <div class="message" id="sourceFormMessage"></div>
+            </div>
+            <div class="card" id="runsCard" style="display:none">
+                <h2 id="runsTitle">Run history</h2>
+                <div id="runsTable"></div>
+            </div>
+        </section>
+
+        <section id="vocabulary">
+            <div class="card">
+                <h2>Rigs</h2>
+                <p class="hint">A Rig is one optical configuration. It claims files by camera and focal-length range,
+                    and optionally by patterns matched against the Optical Train (ignoring case; <code>*</code>
+                    matches anything). A file matching no Rig is unassigned, and one matching several is ambiguous
+                    and left unassigned.</p>
+                <div id="rigsTable"></div>
+                <h3>Suggested Rigs</h3>
+                <p class="hint">Unassigned Optical Trains grouped by camera and by focal lengths within 3% of each
+                    other, so the same set-up written several ways appears once. "Use" fills the form below; check
+                    the id and name, then save.</p>
+                <div id="suggestionsTable"></div>
+                <h3>Add or edit a Rig</h3>
+                <div class="row">
+                    <div><label>Rig id (letters, digits, dot, hyphen)</label><input id="rigId" placeholder="60ed-294mc"></div>
+                    <div><label>Display name</label><input id="rigName" placeholder="Apertura 60ED + ASI294MC Pro"></div>
+                </div>
+                <div class="row">
+                    <div><label>Camera (vendor words and spacing are ignored)</label><input id="rigCamera" placeholder="ASI294MC Pro"></div>
+                    <div><label>Focal length from (mm)</label><input id="rigFocalMin" type="number" step="any" placeholder="365"></div>
+                    <div><label>Focal length to (mm)</label><input id="rigFocalMax" type="number" step="any" placeholder="378"></div>
+                </div>
+                <label>Extra Optical Train patterns, one per line (optional; for anything camera and focal length cannot express)</label>
+                <textarea id="rigPatterns" rows="2" placeholder="*seestar s50*"></textarea>
+                <label>Dates in use, one range per line as <code>start..end</code> (either side may be blank); empty = always</label>
+                <textarea id="rigRanges" rows="2" placeholder="2026-06-01.."></textarea>
+                <div class="actions"><button id="rigSave">Save Rig</button></div>
+                <div class="message" id="rigMessage"></div>
+                <h3>Optical Trains in the library</h3>
+                <div id="trainsTable"></div>
+            </div>
+            <div class="card">
+                <h2>Filters</h2>
+                <p class="hint">Header filter values and the canonical Filter each maps to.</p>
+                <div id="filtersTable"></div>
+                <div class="message" id="filterMessage"></div>
+            </div>
+            <div class="card">
+                <h2>Targets</h2>
+                <p class="hint">Each target group has one canonical name, used in Project folders and output names.</p>
+                <div id="targetsTable"></div>
+                <div class="message" id="targetMessage"></div>
+            </div>
+        </section>
+
+        <section id="projects">
+            <div class="card">
+                <h2>Projects</h2>
+                <div id="projectsTable"></div>
+                <div class="row">
+                    <div><label>Target</label><select id="projTarget"></select></div>
+                    <div><label>Project name (optional)</label><input id="projName" placeholder="defaults to the Target name"></div>
+                </div>
+                <div class="actions"><button id="projCreate">Create Project</button></div>
+                <div class="message" id="projMessage"></div>
+            </div>
+            <div class="card" id="projectDetail" style="display:none">
+                <h2 id="projTitle"></h2>
+                <p class="hint" id="projFolder"></p>
+                <h3>Checkouts</h3>
+                <div id="checkoutsTable"></div>
+                <h3>New Checkout</h3>
+                <p class="hint">Choose which lights to hand out. Leaving a group entirely unticked places no
+                    restriction on it.</p>
+                <label>Sessions</label><div class="checks" id="optSessions"></div>
+                <label>Rigs</label><div class="checks" id="optRigs"></div>
+                <label>Filters</label><div class="checks" id="optFilters"></div>
+                <div class="actions">
+                    <button class="secondary" id="coPreview">Preview</button>
+                    <button id="coCreate">Create Checkout</button>
+                </div>
+                <div class="message" id="coMessage"></div>
+                <div id="coPreviewTable"></div>
+                <h3>Runs and outputs</h3>
+                <div id="runsList"></div>
+                <div id="inputsPanel"></div>
+            </div>
+        </section>
+
+        <section id="hashing">
+            <div class="card">
+                <h2>Content hashes</h2>
+                <p class="hint">A sub needs a Content hash before it can go into a Checkout. Files pulled from a
+                    Source are hashed as they arrive; this pass covers everything else under the library roots.</p>
+                <div id="hashStatus"></div>
+                <div class="actions">
+                    <button id="hashStart">Start hashing pass</button>
+                    <button class="danger" id="hashCancel" style="display:none">Stop hashing</button>
+                </div>
+                <div class="message" id="hashMessage"></div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const $ = (id) => document.getElementById(id);
+        const TABS = [["sources", "Sources"], ["vocabulary", "Rigs, Filters, Targets"], ["projects", "Projects"], ["hashing", "Hashing"]];
+
+        function esc(value) {
+            return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+
+        function bytes(n) {
+            if (n == null) return "";
+            const units = ["B", "KB", "MB", "GB", "TB"];
+            let i = 0;
+            while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+            return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
+        }
+
+        const hours = (seconds) => `${((seconds || 0) / 3600).toFixed(2)} h`;
+        const when = (iso) => iso ? iso.slice(0, 16).replace("T", " ") : "";
+
+        async function api(method, path, body) {
+            const res = await fetch(path, {
+                method,
+                headers: body ? { "Content-Type": "application/json" } : {},
+                body: body ? JSON.stringify(body) : undefined,
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+            return data;
+        }
+
+        function say(id, text, kind) {
+            const el = $(id);
+            el.textContent = text || "";
+            el.className = "message" + (kind ? " " + kind : "");
+        }
+
+        function table(headers, rows, empty) {
+            if (!rows.length) return `<p class="muted">${esc(empty || "Nothing yet.")}</p>`;
+            const head = headers.map((h) => `<th class="${h.num ? "num" : ""}">${esc(h.label ?? h)}</th>`).join("");
+            const body = rows.map((cells) => "<tr>" + cells.map((c, i) =>
+                `<td class="${headers[i].num ? "num" : ""}">${c ?? ""}</td>`).join("") + "</tr>").join("");
+            return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+        }
+
+        function showTab(name) {
+            for (const [id] of TABS) {
+                $(id).classList.toggle("active", id === name);
+                $("tab-" + id).classList.toggle("active", id === name);
+            }
+            location.hash = name;
+            ({ sources: loadSources, vocabulary: loadVocabulary, projects: loadProjects, hashing: loadHashing })[name]();
+        }
+
+        $("tabs").innerHTML = TABS.map(([id, label]) => `<button class="tab" id="tab-${id}">${label}</button>`).join("");
+        for (const [id] of TABS) $("tab-" + id).addEventListener("click", () => showTab(id));
+
+        // ---- Sources ----------------------------------------------------------
+
+        let editingSource = null;
+        let sourcesById = {};
+
+        function outcomeBadge(run, job) {
+            if (job && job.state === "running") {
+                const p = job.progress || {};
+                return `<span class="badge warn">pulling ${p.copied ?? 0}/${p.to_copy ?? "?"}</span>`;
+            }
+            if (!run) return '<span class="badge">never run</span>';
+            const kind = { ok: "ok", unreachable: "", error: "bad", cancelled: "warn", running: "warn" }[run.outcome] ?? "";
+            return `<span class="badge ${kind}">${esc(run.outcome)}</span>`;
+        }
+
+        async function loadSources() {
+            const data = await api("GET", "/api/sources");
+            sourcesById = Object.fromEntries(data.sources.map((s) => [s.id, s]));
+            if (!$("srcProfile").options.length) {
+                $("srcProfile").innerHTML = data.profiles.map((p) => `<option>${esc(p)}</option>`).join("");
+            }
+            $("sourcesTable").innerHTML = table(
+                ["Name", "Mirror", "Every", "Last run", { label: "Copied", num: true }, "Free", ""],
+                data.sources.map((s) => [
+                    `<strong>${esc(s.name)}</strong>${s.enabled ? "" : ' <span class="badge">disabled</span>'}<br><span class="muted">${esc(s.profile)}</span>`,
+                    `<code>${esc(s.mirror_dir)}</code>`,
+                    s.interval_minutes ? `${s.interval_minutes} min` : "manual",
+                    `${outcomeBadge(s.last_run, s.job)}<br><span class="muted">${when(s.last_run?.started_at)}</span>`,
+                    s.last_run ? `${s.last_run.files_copied}<br><span class="muted">${bytes(s.last_run.bytes_copied)}</span>` : "",
+                    bytes(s.mirror_free_bytes),
+                    `<div class="actions" style="margin:0">
+                        <button data-act="pull" data-id="${s.id}">Pull now</button>
+                        <button class="secondary" data-act="runs" data-id="${s.id}">History</button>
+                        <button class="secondary" data-act="edit" data-id="${s.id}">Edit</button>
+                        <button class="danger" data-act="delete" data-id="${s.id}">Remove</button>
+                     </div>`,
+                ]),
+                "No Sources yet. Add one below.");
+            if (data.sources.some((s) => s.job && s.job.state === "running")) setTimeout(loadSources, 2000);
+        }
+
+        $("sourcesTable").addEventListener("click", async (event) => {
+            const button = event.target.closest("button[data-act]");
+            if (!button) return;
+            const source = sourcesById[button.dataset.id];
+            try {
+                if (button.dataset.act === "pull") {
+                    await api("POST", `/api/sources/${source.id}/pull`);
+                    say("sourcesMessage", `Pull started for ${source.name}.`, "ok");
+                    setTimeout(loadSources, 800);
+                } else if (button.dataset.act === "runs") {
+                    await showRuns(source);
+                } else if (button.dataset.act === "edit") {
+                    editingSource = source.id;
+                    $("sourceFormTitle").textContent = `Edit ${source.name}`;
+                    $("srcName").value = source.name; $("srcProfile").value = source.profile;
+                    $("srcHost").value = source.host || ""; $("srcDir").value = source.source_dir;
+                    $("srcMirror").value = source.mirror_dir; $("srcInterval").value = source.interval_minutes;
+                    $("srcStability").value = source.stability_seconds; $("srcEnabled").checked = source.enabled;
+                } else if (button.dataset.act === "delete") {
+                    if (!confirm(`Remove the Source "${source.name}" and its run history?\n\nIts mirror folder and catalogued files are kept.`)) return;
+                    await api("DELETE", `/api/sources/${source.id}`);
+                    await loadSources();
+                }
+            } catch (e) { say("sourcesMessage", e.message, "error"); }
+        });
+
+        async function showRuns(source) {
+            const data = await api("GET", `/api/sources/${source.id}/runs`);
+            $("runsCard").style.display = "";
+            $("runsTitle").textContent = `Run history: ${source.name}`;
+            $("runsTable").innerHTML = table(
+                ["Started", "Outcome", { label: "Copied", num: true }, { label: "Size", num: true }, { label: "Held back", num: true }, { label: "Differing", num: true }, "Detail"],
+                data.runs.map((r) => [when(r.started_at), outcomeBadge(r), r.files_copied, bytes(r.bytes_copied), r.held_back, r.differing, esc(r.detail || "")]),
+                "No runs yet.");
+        }
+
+        function resetSourceForm() {
+            editingSource = null;
+            $("sourceFormTitle").textContent = "Add a Source";
+            for (const id of ["srcName", "srcHost", "srcDir", "srcMirror"]) $(id).value = "";
+            $("srcInterval").value = 60; $("srcStability").value = 600; $("srcEnabled").checked = true;
+        }
+
+        $("srcReset").addEventListener("click", resetSourceForm);
+        $("srcSave").addEventListener("click", async () => {
+            const body = {
+                name: $("srcName").value, profile: $("srcProfile").value, host: $("srcHost").value || null,
+                source_dir: $("srcDir").value, mirror_dir: $("srcMirror").value,
+                interval_minutes: Number($("srcInterval").value), stability_seconds: Number($("srcStability").value),
+                enabled: $("srcEnabled").checked,
+            };
+            try {
+                if (editingSource) await api("PUT", `/api/sources/${editingSource}`, body);
+                else await api("POST", "/api/sources", body);
+                say("sourceFormMessage", "Saved.", "ok");
+                resetSourceForm();
+                await loadSources();
+            } catch (e) { say("sourceFormMessage", e.message, "error"); }
+        });
+
+        // ---- Rigs, Filters, Targets ---------------------------------------------
+
+        async function loadVocabulary() {
+            const [rigs, filters, targets] = await Promise.all([
+                api("GET", "/api/rigs"), api("GET", "/api/filters"), api("GET", "/api/targets")]);
+
+            const focalText = (r) => r.focal_min == null && r.focal_max == null ? "any focal length"
+                : `${r.focal_min ?? ""} to ${r.focal_max ?? ""} mm`;
+            $("rigsTable").innerHTML = table(["Id", "Name", "Matches", "Dates", ""],
+                rigs.rigs.map((r) => [
+                    `<code>${esc(r.id)}</code>`, esc(r.name),
+                    (r.camera ? `camera <code>${esc(r.camera)}</code>, ${esc(focalText(r))}<br>` : "")
+                        + r.patterns.map((p) => `<code>${esc(p)}</code>`).join(" "),
+                    r.date_ranges.length ? r.date_ranges.map(([a, b]) => `${esc(a || "")}..${esc(b || "")}`).join("<br>") : "always",
+                    `<button class="secondary" data-rig="${esc(r.id)}">Edit</button> <button class="danger" data-rig-delete="${esc(r.id)}">Remove</button>`,
+                ]), "No Rigs registered yet.");
+            window.rigsById = Object.fromEntries(rigs.rigs.map((r) => [r.id, r]));
+            window.rigSuggestions = rigs.suggestions;
+            $("suggestionsTable").innerHTML = table(
+                ["Suggested id", "Camera", "Focal length", { label: "Files", num: true }, "Dates", "Optical Trains covered", ""],
+                rigs.suggestions.map((g, i) => [
+                    `<code>${esc(g.id)}</code>`, `<code>${esc(g.camera)}</code>`, `${g.focal_min} to ${g.focal_max} mm`, g.file_count,
+                    `${esc(g.first_date || "")} to ${esc(g.last_date || "")}`,
+                    g.optical_trains.map(esc).join("<br>"),
+                    `<button class="secondary" data-suggestion="${i}">Use</button>`,
+                ]), "Nothing to suggest: every Optical Train with a camera and focal length is assigned.");
+
+            $("trainsTable").innerHTML = table(
+                ["Optical Train", { label: "Files", num: true }, "Dates", "Rig", ""],
+                rigs.optical_trains.map((t) => [
+                    esc(t.optical_train || "(none)"), t.file_count,
+                    `${esc((t.first_date || "").slice(0, 10))} to ${esc((t.last_date || "").slice(0, 10))}`,
+                    (t.rig_ids.map((id) => `<code>${esc(id)}</code>`).join(" ") || "")
+                        + (t.unassigned_count ? ` <span class="badge warn">${t.unassigned_count} unassigned</span>` : "")
+                        + (t.ambiguous_count ? ` <span class="badge bad">${t.ambiguous_count} ambiguous</span>` : ""),
+                    t.optical_train ? `<button class="secondary" data-train="${esc(t.optical_train)}">Use as pattern</button>` : "",
+                ]), "No files catalogued yet.");
+
+            $("filtersTable").innerHTML = table(["Header value", "Canonical Filter", { label: "Files", num: true }, ""],
+                filters.in_library.map((f) => [
+                    esc(f.filter ?? "(none)"),
+                    `<input data-filter-raw="${esc(f.filter ?? "")}" value="${esc(f.filter_canonical ?? "")}" style="max-width:12rem">`,
+                    f.file_count,
+                    `<button class="secondary" data-filter-save="${esc(f.filter ?? "")}">Save</button>`,
+                ]), "No files catalogued yet.");
+
+            $("targetsTable").innerHTML = table(["Name", "Header labels", { label: "Files", num: true }, ""],
+                targets.targets.map((t) => [
+                    `<input data-target="${t.target_group_id}" value="${esc(t.name ?? "")}" style="max-width:16rem">`,
+                    esc(t.labels.join(", ")), t.file_count,
+                    `<button class="secondary" data-target-save="${t.target_group_id}">Save</button>`,
+                ]), "No target groups yet. Run a scan with clustering first.");
+        }
+
+        function parseRanges(text) {
+            return text.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+                const [start, end] = line.split("..");
+                return [start?.trim() || null, end?.trim() || null];
+            });
+        }
+
+        $("rigSave").addEventListener("click", async () => {
+            try {
+                const number = (id) => $(id).value.trim() === "" ? null : Number($(id).value);
+                await api("PUT", `/api/rigs/${encodeURIComponent($("rigId").value.trim())}`, {
+                    name: $("rigName").value, patterns: $("rigPatterns").value.split("\n"), date_ranges: parseRanges($("rigRanges").value),
+                    camera: $("rigCamera").value.trim() || null, focal_min: number("rigFocalMin"), focal_max: number("rigFocalMax"),
+                });
+                say("rigMessage", "Saved, and files reassigned.", "ok");
+                await loadVocabulary();
+            } catch (e) { say("rigMessage", e.message, "error"); }
+        });
+
+        $("vocabulary").addEventListener("click", async (event) => {
+            const b = event.target.closest("button");
+            if (!b) return;
+            try {
+                if (b.dataset.rig) {
+                    const rig = window.rigsById[b.dataset.rig];
+                    $("rigId").value = rig.id; $("rigName").value = rig.name; $("rigPatterns").value = rig.patterns.join("\n");
+                    $("rigCamera").value = rig.camera || ""; $("rigFocalMin").value = rig.focal_min ?? ""; $("rigFocalMax").value = rig.focal_max ?? "";
+                    $("rigRanges").value = rig.date_ranges.map(([a, c]) => `${a || ""}..${c || ""}`).join("\n");
+                } else if (b.dataset.rigDelete) {
+                    if (!confirm(`Remove the Rig "${b.dataset.rigDelete}"? Its files become unassigned.`)) return;
+                    await api("DELETE", `/api/rigs/${encodeURIComponent(b.dataset.rigDelete)}`);
+                    await loadVocabulary();
+                } else if (b.dataset.suggestion !== undefined) {
+                    const g = window.rigSuggestions[Number(b.dataset.suggestion)];
+                    $("rigId").value = g.id; $("rigName").value = g.name; $("rigCamera").value = g.camera;
+                    $("rigFocalMin").value = g.focal_min; $("rigFocalMax").value = g.focal_max;
+                    $("rigPatterns").value = ""; $("rigRanges").value = "";
+                    $("rigId").focus();
+                } else if (b.dataset.train) {
+                    $("rigPatterns").value = b.dataset.train;
+                    $("rigId").focus();
+                } else if (b.dataset.filterSave !== undefined) {
+                    const raw = b.dataset.filterSave;
+                    const input = [...document.querySelectorAll("input[data-filter-raw]")].find((i) => i.dataset.filterRaw === raw);
+                    await api("PUT", "/api/filters", { raw, canonical: input.value.trim() || null });
+                    say("filterMessage", "Saved.", "ok");
+                    await loadVocabulary();
+                } else if (b.dataset.targetSave) {
+                    const input = document.querySelector(`input[data-target="${b.dataset.targetSave}"]`);
+                    await api("PUT", `/api/targets/${b.dataset.targetSave}`, { name: input.value.trim() });
+                    say("targetMessage", "Saved.", "ok");
+                }
+            } catch (e) {
+                say(b.dataset.filterSave !== undefined ? "filterMessage" : b.dataset.targetSave ? "targetMessage" : "rigMessage", e.message, "error");
+            }
+        });
+
+        // ---- Projects -----------------------------------------------------------
+
+        let currentProject = null;
+
+        async function loadProjects() {
+            const [projects, targets] = await Promise.all([api("GET", "/api/projects"), api("GET", "/api/targets")]);
+            $("projectsTable").innerHTML = table(["Project", "Target", "Status", { label: "Checkouts", num: true }, ""],
+                projects.projects.map((p) => [
+                    `<strong>${esc(p.name)}</strong><br><code>${esc(p.slug)}</code>`, esc(p.target_name), esc(p.status), p.checkout_count,
+                    `<button class="secondary" data-project="${esc(p.slug)}">Open</button>`,
+                ]), "No Projects yet.");
+            $("projTarget").innerHTML = targets.targets.filter((t) => t.name).map((t) =>
+                `<option value="${t.target_group_id}">${esc(t.name)} (${t.file_count} files)</option>`).join("");
+            if (currentProject) await openProject(currentProject);
+        }
+
+        $("projCreate").addEventListener("click", async () => {
+            try {
+                const project = await api("POST", "/api/projects", {
+                    target_group_id: Number($("projTarget").value), name: $("projName").value || null });
+                $("projName").value = "";
+                currentProject = project.slug;
+                await loadProjects();
+            } catch (e) { say("projMessage", e.message, "error"); }
+        });
+
+        $("projectsTable").addEventListener("click", (event) => {
+            const b = event.target.closest("button[data-project]");
+            if (b) openProject(b.dataset.project);
+        });
+
+        function checks(containerId, options, labelOf) {
+            $(containerId).innerHTML = options.map((o) =>
+                `<label><input type="checkbox" value="${esc(o.value)}"> ${esc(labelOf(o))} <span class="muted">(${o.count}, ${hours(o.integration_seconds)})</span></label>`
+            ).join("") || '<span class="muted">none</span>';
+        }
+
+        function ticked(containerId, asNumber) {
+            const values = [...$(containerId).querySelectorAll("input:checked")].map((i) => asNumber ? Number(i.value) : i.value);
+            return values.length ? values : null;
+        }
+
+        const selection = () => ({ session_ids: ticked("optSessions", true), rigs: ticked("optRigs"), filters: ticked("optFilters") });
+
+        function groupsTable(built) {
+            const left = built.left_out || {};
+            const notes = Object.entries(left).filter(([, n]) => n).map(([k, n]) => `${n} left out (${k.replace("_", " ")})`).join("; ");
+            return table(["Rig", "Filter", { label: "Subs", num: true }, { label: "Integration", num: true }, { label: "Size", num: true }],
+                built.groups.map((g) => [esc(g.rig), esc(g.filter), g.count, hours(g.integration_seconds), bytes(g.bytes)]),
+                "No subs match this selection.") + (notes ? `<p class="hint" style="margin-top:0.5rem">${esc(notes)}</p>` : "");
+        }
+
+        async function openProject(slug) {
+            currentProject = slug;
+            const [data, runs] = await Promise.all([api("GET", `/api/projects/${slug}`), api("GET", `/api/projects/${slug}/runs`)]);
+            $("projectDetail").style.display = "";
+            $("projTitle").textContent = `${data.project.name} (${data.project.target_name})`;
+            $("projFolder").innerHTML = data.folder
+                ? `Folder: <code>${esc(data.folder)}</code> &middot; on the Mac: <code>astro checkout ${esc(slug)}</code>, then <code>astro checkin ${esc(slug)}</code>`
+                : "No projects root is configured (ASTRO_PROJECTS_ROOT), so files cannot be stored.";
+            $("checkoutsTable").innerHTML = table(
+                ["#", "Created", { label: "Subs", num: true }, { label: "Integration", num: true }, "Working folder"],
+                data.checkouts.map((c) => [String(c.number).padStart(2, "0"), when(c.created_at), c.sub_count,
+                    hours(c.integration_seconds), c.working_dir ? `<code>${esc(c.working_dir)}</code>` : '<span class="muted">not checked out yet</span>']),
+                "No Checkouts yet.");
+            checks("optSessions", data.options.sessions, (o) => o.label);
+            checks("optRigs", data.options.rigs, (o) => o.value);
+            checks("optFilters", data.options.filters, (o) => o.value);
+            $("coPreviewTable").innerHTML = "";
+            $("inputsPanel").innerHTML = "";
+
+            $("runsList").innerHTML = runs.runs.length ? runs.runs.map((r) => `
+                <div style="margin-bottom:1rem">
+                    <strong>${String(r.number).padStart(2, "0")} ${esc(r.tool)}</strong>
+                    <span class="muted">${esc(r.kind)}, ${when(r.created_at)}, <code>${esc(r.folder)}</code></span>
+                    ${r.notes ? `<p class="hint" style="margin:0.3rem 0">${esc(r.notes)}</p>` : ""}
+                    ${table(["Stage", "Stored as", "Name from the tool", { label: "Size", num: true }, ""],
+                        r.artifacts.map((a) => [
+                            a.stage ? `<span class="badge ok">${esc(a.stage)}</span>` : `<span class="muted">${esc(a.kind)}</span>`,
+                            `<code>${esc(a.stored_relpath)}</code>`, esc(a.original_name), bytes(a.size),
+                            a.stage ? `<button class="secondary" data-inputs="${a.id}">Subs behind it</button>` : "",
+                        ]), "No files.")}
+                </div>`).join("") : '<p class="muted">Nothing checked in yet.</p>';
+        }
+
+        $("coPreview").addEventListener("click", async () => {
+            try {
+                $("coPreviewTable").innerHTML = groupsTable(await api("POST", `/api/projects/${currentProject}/checkouts/preview`, selection()));
+                say("coMessage", "");
+            } catch (e) { say("coMessage", e.message, "error"); }
+        });
+
+        $("coCreate").addEventListener("click", async () => {
+            try {
+                const created = await api("POST", `/api/projects/${currentProject}/checkouts`, selection());
+                say("coMessage", `Checkout ${String(created.checkout.number).padStart(2, "0")} created with ${created.sub_count} subs.`, "ok");
+                await loadProjects();
+            } catch (e) { say("coMessage", e.message, "error"); }
+        });
+
+        $("runsList").addEventListener("click", async (event) => {
+            const b = event.target.closest("button[data-inputs]");
+            if (!b) return;
+            const data = await api("GET", `/api/artifacts/${b.dataset.inputs}/inputs`);
+            $("inputsPanel").innerHTML = `<h3>${data.sub_count} subs were available to <code>${esc(data.artifact.stored_relpath)}</code></h3>
+                <p class="hint">These are the subs of the Checkout this run worked from. Which of them the tool actually
+                stacked is in its log, stored with the run.</p>` +
+                table([{ label: "#", num: true }, "File", "Night", "Rig", "Filter"],
+                    data.subs.slice(0, 200).map((s) => [s.position, esc(s.file_name), esc(s.night || ""), esc(s.rig), esc(s.filter)]),
+                    "This run had no Checkout, so no subs are recorded behind it.") +
+                (data.sub_count > 200 ? `<p class="hint">Showing the first 200 of ${data.sub_count}.</p>` : "");
+        });
+
+        // ---- Hashing ------------------------------------------------------------
+
+        async function loadHashing() {
+            const data = await api("GET", "/api/hash/status");
+            const c = data.counts, job = data.job;
+            let line = `<p><strong>${c.hashed}</strong> of ${c.total} files hashed, <strong>${c.pending}</strong> pending, <strong>${c.failed}</strong> failed.</p>`;
+            if (job) {
+                const p = job.progress || {};
+                line += `<p class="hint" style="margin-top:0.5rem">Last pass: ${esc(job.state)}` +
+                    (job.state === "running" ? `, ${(p.hashed ?? 0) + (p.failed ?? 0)}/${p.total ?? "?"}` : "") +
+                    (job.error ? `: ${esc(job.error)}` : "") + "</p>";
+            }
+            const running = !!job && job.state === "running";
+            if (running) {
+                const p = job.progress || {};
+                const done = (p.hashed ?? 0) + (p.failed ?? 0);
+                const elapsed = Date.now() / 1000 - job.started_at;
+                const rate = done > 0 ? done / elapsed : 0;
+                const left = rate > 0 && p.total ? (p.total - done) / rate : null;
+                const eta = left == null ? "" : left > 5400 ? `, about ${(left / 3600).toFixed(1)} h left` : `, about ${Math.ceil(left / 60)} min left`;
+                line += `<p class="hint">Running: ${done} of ${p.total ?? "?"} in this pass${eta}. Stopping is safe;
+                    files already hashed are kept and the next pass carries on from there.</p>`
+                    + (p.current ? `<p class="hint">Now: <code>${esc(p.current)}</code></p>` : "");
+            }
+            $("hashStatus").innerHTML = line;
+            $("hashStart").style.display = running ? "none" : "";
+            $("hashCancel").style.display = running ? "" : "none";
+            if (running && $("hashing").classList.contains("active")) setTimeout(loadHashing, 2000);
+        }
+
+        $("hashStart").addEventListener("click", async () => {
+            try { await api("POST", "/api/hash/start"); say("hashMessage", "Started.", "ok"); setTimeout(loadHashing, 500); }
+            catch (e) { say("hashMessage", e.message, "error"); }
+        });
+        $("hashCancel").addEventListener("click", async () => {
+            try { await api("POST", "/api/hash/cancel"); say("hashMessage", "Stopping after the current file.", "ok"); setTimeout(loadHashing, 1500); }
+            catch (e) { say("hashMessage", e.message, "error"); }
+        });
+
+        const initial = location.hash.slice(1);
+        showTab(TABS.some(([id]) => id === initial) ? initial : "sources");
+    </script>
+</body>
+
+</html>

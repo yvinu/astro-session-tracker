@@ -7,6 +7,7 @@ with CORS.
 
 import argparse
 import os
+from contextlib import asynccontextmanager
 import subprocess
 from typing import Optional
 
@@ -14,21 +15,58 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from astro_tracker import integration, scan_job, siril_export, storage
+from astro_tracker import config, integration, scan_job, siril_export, storage
 from astro_tracker.exporter import records_to_csv
 from astro_tracker.scanner import DEFAULT_DB_PATH
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASHBOARD_PATH = os.path.join(REPO_ROOT, "dashboard.html")
 SCAN_PAGE_PATH = os.path.join(REPO_ROOT, "scan.html")
+STUDIO_PATH = os.path.join(REPO_ROOT, "fits_studio.html")
+LIBRARY_PAGE_PATH = os.path.join(REPO_ROOT, "library.html")
+
+from fastapi.middleware.cors import CORSMiddleware
 
 DB_PATH = os.environ.get("ASTRO_TRACKER_DB", DEFAULT_DB_PATH)
 
-app = FastAPI(title="Astro Session Tracker API")
+@asynccontextmanager
+async def lifespan(_app):
+    """Start scheduled Source pulls and the nightly catalog snapshot, when enabled for this deployment.
+
+    Off by default so that running the server on a laptop, or under
+    tests, never starts copying from devices on its own.
+    """
+    if config.scheduler_enabled():
+        from astro_tracker import library_storage, source_runs
+        conn = storage.connect(DB_PATH)
+        storage.init_schema(conn)
+        library_storage.close_abandoned_source_runs(conn)
+        conn.close()
+        source_runs.Scheduler(DB_PATH).start()
+    yield
+
+
+app = FastAPI(title="Astro Session Tracker API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_conn():
     return storage.connect(DB_PATH)
+
+
+from astro_tracker import library_api  # noqa: E402  (needs `app` to exist)
+
+app.include_router(library_api.router)
+library_api.get_db_path = lambda: DB_PATH  # read at call time: main() sets DB_PATH from --db
+
+
 
 
 @app.get("/")
@@ -39,6 +77,35 @@ def serve_dashboard():
 @app.get("/scan")
 def serve_scan_page():
     return FileResponse(SCAN_PAGE_PATH)
+
+
+@app.get("/studio")
+def serve_studio_page():
+    return FileResponse(STUDIO_PATH)
+
+
+@app.get("/library")
+def serve_library_page():
+    return FileResponse(LIBRARY_PAGE_PATH)
+
+
+@app.get("/api/fits-dictionary")
+def get_fits_dictionary():
+    dict_path = os.path.join(REPO_ROOT, "astro_tracker", "fits_dictionary.json")
+    if os.path.exists(dict_path):
+        return FileResponse(dict_path, media_type="application/json")
+    raise HTTPException(status_code=404, detail="Dictionary file not found")
+
+
+@app.post("/api/corpus/reset")
+def reset_corpus_api():
+    try:
+        from astro_tracker.fits_graph_db import FITSGraphDB
+        graph_db = FITSGraphDB()
+        graph_db.reset_database()
+        return {"status": "success", "message": "Corpus database and dictionary reset successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/files")
@@ -183,9 +250,18 @@ def cancel_scan():
 def recent_directories():
     conn = get_conn()
     try:
-        return {"directories": storage.get_recent_scan_directories(conn)}
+        recent = storage.get_recent_scan_directories(conn)
     finally:
         conn.close()
+    # Configured library roots come first: on the NAS there is no native
+    # folder picker, so these are how a scan target is chosen.
+    roots = [path for _name, path in config.library_roots()]
+    return {"directories": roots + [d for d in recent if d not in roots]}
+
+
+@app.get("/api/library-roots")
+def library_roots():
+    return {"roots": [{"name": name, "path": path} for name, path in config.library_roots()]}
 
 
 BROWSE_FOLDER_PROMPTS = {
@@ -216,6 +292,10 @@ def browse_folder(body: BrowseFolderRequest = BrowseFolderRequest()):
             ["osascript", "-e", script],
             capture_output=True, text=True, timeout=300,
         )
+    except FileNotFoundError:
+        # Not macOS (e.g. the container on the NAS): no native picker. The
+        # scan page falls back to configured roots and a typed path.
+        return {"directory": None, "unavailable": True}
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=408, detail="Folder picker timed out")
 
@@ -242,9 +322,77 @@ def export_target_group_to_siril(group_id: int, body: SirilExportRequest):
         conn.close()
 
     if not files:
-        raise HTTPException(status_code=404, detail=f"Target group {group_id} has no files")
+        raise HTTPException(status_code=404, detail=f"Target group {group_id} has no Light frames")
 
-    return siril_export.build_working_folder(files, body.destination, group_id)
+    return siril_export.build_lights_export(files, body.destination, group_id)
+
+
+class HeaderAnalysisRequest(BaseModel):
+    directory: str
+    ignore_symlinks: bool = True
+    min_combo_pct: float = 1.0
+    update_graph: bool = True
+
+
+analysis_job_state = {
+    "status": "idle",
+    "progress_pct": 0.0,
+    "processed": 0,
+    "total": 0,
+    "current_file": "",
+    "results": None,
+    "error": None
+}
+
+
+@app.post("/api/header-analysis/start")
+def start_header_analysis(body: HeaderAnalysisRequest):
+    global analysis_job_state
+    dir_path = os.path.expanduser(body.directory)
+    if not os.path.exists(dir_path):
+        raise HTTPException(status_code=400, detail=f"Directory '{dir_path}' does not exist.")
+
+    if analysis_job_state["status"] == "running":
+        raise HTTPException(status_code=409, detail="An analysis job is already running.")
+
+    analysis_job_state = {
+        "status": "running",
+        "progress_pct": 0.0,
+        "processed": 0,
+        "total": 0,
+        "current_file": "Initializing scan...",
+        "results": None,
+        "error": None
+    }
+
+    def worker():
+        global analysis_job_state
+        try:
+            from fits_header_analyzer import run_analysis
+            def progress_cb(current, total, file_path):
+                analysis_job_state["processed"] = current
+                analysis_job_state["total"] = total
+                analysis_job_state["progress_pct"] = round((current / total) * 100, 1) if total > 0 else 0
+                analysis_job_state["current_file"] = os.path.basename(file_path)
+
+            res = run_analysis(dir_path, ignore_symlinks=body.ignore_symlinks, min_combo_pct=body.min_combo_pct, progress_callback=progress_cb)
+            analysis_job_state["results"] = res
+            analysis_job_state["status"] = "completed"
+            analysis_job_state["progress_pct"] = 100.0
+            analysis_job_state["current_file"] = "Analysis complete!"
+        except Exception as e:
+            analysis_job_state["status"] = "failed"
+            analysis_job_state["error"] = str(e)
+
+    import threading
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+    return {"status": "started", "directory": dir_path}
+
+
+@app.get("/api/header-analysis/status")
+def get_header_analysis_status():
+    return analysis_job_state
 
 
 def main():
