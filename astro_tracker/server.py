@@ -7,6 +7,7 @@ with CORS.
 
 import argparse
 import os
+from contextlib import asynccontextmanager
 import subprocess
 from typing import Optional
 
@@ -14,7 +15,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from astro_tracker import integration, scan_job, siril_export, storage
+from astro_tracker import config, integration, scan_job, siril_export, storage
 from astro_tracker.exporter import records_to_csv
 from astro_tracker.scanner import DEFAULT_DB_PATH
 
@@ -22,12 +23,30 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASHBOARD_PATH = os.path.join(REPO_ROOT, "dashboard.html")
 SCAN_PAGE_PATH = os.path.join(REPO_ROOT, "scan.html")
 STUDIO_PATH = os.path.join(REPO_ROOT, "fits_studio.html")
+LIBRARY_PAGE_PATH = os.path.join(REPO_ROOT, "library.html")
 
 from fastapi.middleware.cors import CORSMiddleware
 
 DB_PATH = os.environ.get("ASTRO_TRACKER_DB", DEFAULT_DB_PATH)
 
-app = FastAPI(title="Astro Session Tracker API")
+@asynccontextmanager
+async def lifespan(_app):
+    """Start scheduled Source pulls and the nightly catalog snapshot, when enabled for this deployment.
+
+    Off by default so that running the server on a laptop, or under
+    tests, never starts copying from devices on its own.
+    """
+    if config.scheduler_enabled():
+        from astro_tracker import library_storage, source_runs
+        conn = storage.connect(DB_PATH)
+        storage.init_schema(conn)
+        library_storage.close_abandoned_source_runs(conn)
+        conn.close()
+        source_runs.Scheduler(DB_PATH).start()
+    yield
+
+
+app = FastAPI(title="Astro Session Tracker API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,6 +59,14 @@ app.add_middleware(
 
 def get_conn():
     return storage.connect(DB_PATH)
+
+
+from astro_tracker import library_api  # noqa: E402  (needs `app` to exist)
+
+app.include_router(library_api.router)
+library_api.get_db_path = lambda: DB_PATH  # read at call time: main() sets DB_PATH from --db
+
+
 
 
 @app.get("/")
@@ -55,6 +82,11 @@ def serve_scan_page():
 @app.get("/studio")
 def serve_studio_page():
     return FileResponse(STUDIO_PATH)
+
+
+@app.get("/library")
+def serve_library_page():
+    return FileResponse(LIBRARY_PAGE_PATH)
 
 
 @app.get("/api/fits-dictionary")
@@ -218,9 +250,18 @@ def cancel_scan():
 def recent_directories():
     conn = get_conn()
     try:
-        return {"directories": storage.get_recent_scan_directories(conn)}
+        recent = storage.get_recent_scan_directories(conn)
     finally:
         conn.close()
+    # Configured library roots come first: on the NAS there is no native
+    # folder picker, so these are how a scan target is chosen.
+    roots = [path for _name, path in config.library_roots()]
+    return {"directories": roots + [d for d in recent if d not in roots]}
+
+
+@app.get("/api/library-roots")
+def library_roots():
+    return {"roots": [{"name": name, "path": path} for name, path in config.library_roots()]}
 
 
 BROWSE_FOLDER_PROMPTS = {
@@ -251,6 +292,10 @@ def browse_folder(body: BrowseFolderRequest = BrowseFolderRequest()):
             ["osascript", "-e", script],
             capture_output=True, text=True, timeout=300,
         )
+    except FileNotFoundError:
+        # Not macOS (e.g. the container on the NAS): no native picker. The
+        # scan page falls back to configured roots and a typed path.
+        return {"directory": None, "unavailable": True}
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=408, detail="Folder picker timed out")
 

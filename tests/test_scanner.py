@@ -248,3 +248,23 @@ def test_should_stop_halts_scan_early_and_marks_cancelled(tmp_path, make_fits):
     conn = storage.connect(db_path)
     assert storage.get_total_file_count(conn) == 2
     conn.close()
+
+
+def test_symbolic_links_are_ignored_not_failed(tmp_path, make_fits):
+    library = tmp_path / "library"
+    library.mkdir()
+    real = make_fits(library / "light_001.fits")
+    os.symlink(real, library / "linked_00001.fits")
+    os.symlink(tmp_path / "gone" / "light_002.fits", library / "linked_00002.fits")
+    db_path = str(tmp_path / "test.db")
+    error_log = tmp_path / "errors.log"
+
+    counts = scan_directory(str(library), db_path, str(error_log))
+
+    assert counts["new"] == 1
+    assert counts["links"] == 2
+    assert counts["failed"] == 0
+    assert not error_log.exists()
+    conn = sqlite3.connect(db_path)
+    assert conn.execute("SELECT COUNT(*) FROM files").fetchone()[0] == 1
+    conn.close()

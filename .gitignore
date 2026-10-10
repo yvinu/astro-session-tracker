@@ -17,3 +17,6 @@ venv/
 
 # OS
 .DS_Store
+
+# NAS deployment bundle (built with git archive)
+astro-nas-deploy.tar.gz
