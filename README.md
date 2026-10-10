@@ -29,8 +29,8 @@ The project has two parts:
 The tracker can also run as a service on a NAS, where it pulls from the telescopes on a schedule and tracks what goes into each processed image. The design and its reasons are in [`docs/adr/`](docs/adr/) (0004 to 0008) and the vocabulary in [`CONTEXT.md`](CONTEXT.md). Everything below is at `http://<nas>:8000/library`.
 
 - **Sources**: a Source mirrors a device share into a permanent folder on the NAS. A pull copies what the mirror is missing, under a temporary name, keeps the device's file dates, leaves files still being written for the next run, and never overwrites, deletes, or writes to the device. Every run is recorded, including "device was off".
-- **Content hashes**: every file gets a SHA-256, computed in a background pass and as files arrive from a Source.
-- **Rigs, Filters, Targets**: register each optical configuration as a Rig (patterns matched against the Optical Train, with optional date ranges); map each device's filter wording to one canonical Filter; give each target group one canonical Target name.
+- **Content hashes**: every file gets a SHA-256, computed in a background pass and as files arrive from a Source. The pass can be stopped at any time and carries on from where it stopped.
+- **Rigs, Filters, Targets**: register each optical configuration as a Rig, matched by camera and a focal-length range (so a plate-solved focal length that shifts each night still matches), by patterns against the Optical Train, or both, with optional date ranges. The page suggests Rigs by grouping unassigned Optical Trains with the same camera and focal lengths within 3%; map each device's filter wording to one canonical Filter; give each target group one canonical Target name.
 - **Projects and Checkouts**: a Project is processing work on a Target. A Checkout fixes the subs handed out for it, each with its Content hash, grouped by Rig and Filter.
 - **Check-in**: outputs and logs come back as a run. Stacks and finals are stored as `<target>_<rig>_<filter>_<stage>_<frames>x<exposure>s_v<NN>.<ext>`; the name the tool gave is kept in the catalog. Each output is linked to the Checkout it came from, so the subs behind it are known without parsing any log.
 
@@ -56,6 +56,10 @@ To bring an existing catalog over, copy it, then rewrite its paths for the conta
 ```bash
 python -m astro_tracker.migrate_catalog --db catalog.db --map /Volumes/Multimedia=/library
 ```
+
+To update a running service, replace the source folder (keeping your edited `docker-compose.yml`) and run the same `docker compose ... up -d --build` command. The catalog lives in the `astro-data` volume and is kept; schema changes are applied on start. A hashing pass in progress is stopped, and the hashes it finished are kept.
+
+Scans ignore symbolic links, such as those Siril's `link` leaves in `process` folders. They are counted as "Links ignored" and are neither catalogued nor reported as failures.
 
 ### The `astro` command on the Mac
 

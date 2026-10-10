@@ -44,7 +44,7 @@ _Avoid_: Landing folder (a Mirror is not emptied), archive
 A stacked image a smart telescope produced itself, pulled into the Mirror alongside the subs. A File category of its own, apart from Subframe and from Processed files the user made.
 
 **Rig**:
-A named optical configuration (e.g. `s50`, `80ed-533mc-r08`), registered by the user with Optical Train patterns and, optionally, the dates it was in use. Each File is assigned to at most one Rig; a File matching none is unassigned and one matching several is ambiguous, never guessed. Adding a reducer or changing the camera makes a new Rig, because flats and image scale change. The Rig, not the Optical Train, is what names and grouping use.
+A named optical configuration (e.g. `s50`, `80ed-533mc-r08`), registered by the user with a camera and focal-length range, Optical Train patterns, or both, and optionally the dates it was in use. The focal-length range exists because a plate-solved focal length differs slightly from night to night. Each File is assigned to at most one Rig; a File matching none is unassigned and one matching several is ambiguous, never guessed. Adding a reducer or changing the camera makes a new Rig, because flats and image scale change. The Rig, not the Optical Train, is what names and grouping use.
 _Avoid_: Setup, configuration, Optical Train (that is the raw value a Rig is matched against)
 
 **Target**:
