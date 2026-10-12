@@ -375,6 +375,7 @@
             display: none !important;
         }
     </style>
+    <script src="/static/activity.js" defer></script>
 </head>
 
 <body>
@@ -597,6 +598,7 @@
                 renderProgress(data);
                 showPanel(progressPanel);
                 startPolling();
+                if (window.refreshActivity) window.refreshActivity();
             } catch (e) {
                 formError.textContent = 'Could not reach the server.';
                 formError.classList.remove('hidden');

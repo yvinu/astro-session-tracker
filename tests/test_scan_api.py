@@ -130,6 +130,12 @@ def test_header_analysis_runs_beside_the_queue_and_reports_results(site):
     _wait_until(lambda: _idle(client))
 
 
+def test_the_activity_script_is_served(site):
+    client, folder, db = site
+    assert "activityPanel" in client.get("/static/activity.js").text
+    assert client.get("/static/nope.js").status_code == 404
+
+
 def test_restart_repair_marks_cut_off_pulls_and_reports_pending_hashes(site):
     client, folder, db = site
     client.post("/api/scan/start", json={"directory": str(folder)})
