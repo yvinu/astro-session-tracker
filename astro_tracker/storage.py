@@ -7,6 +7,7 @@ exports are generated views over this store, not the other way around.
 import sqlite3
 from datetime import datetime, timezone
 
+from astro_tracker import optical_train
 from astro_tracker.location import parse_location
 
 SCHEMA_SQL = """
@@ -77,7 +78,7 @@ CREATE TABLE IF NOT EXISTS duplicate_groups (
 FILE_COLUMNS = (
     "file_name", "folder", "location", "file_category", "target", "date", "frame_type",
     "exposure", "gain", "temp", "filter", "instrument", "resolution", "binning",
-    "optical_train", "ra", "dec",
+    "optical_train", "telescope", "focal_length", "ra", "dec",
 )
 
 
@@ -252,13 +253,22 @@ def get_all_files(conn):
     (get_summary_stats), never this raw listing.
     """
     plain_columns = [c for c in FILE_COLUMNS if c not in ("ra", "dec")]
-    query = f"""SELECT {", ".join(plain_columns)}, duplicate_group_id,
-                       COALESCE(ra, 'Unknown') AS ra, COALESCE(dec, 'Unknown') AS dec
-                FROM files
-                ORDER BY folder, file_name"""
+    query = f"""SELECT {", ".join("f." + c for c in plain_columns)}, f.duplicate_group_id, f.rig_id,
+                       COALESCE(f.ra, 'Unknown') AS ra, COALESCE(f.dec, 'Unknown') AS dec,
+                       r.name AS rig_name, r.focal_nominal AS rig_focal_nominal
+                FROM files f LEFT JOIN rigs r ON r.id = f.rig_id
+                ORDER BY f.folder, f.file_name"""
     rows = conn.execute(query).fetchall()
-    columns = plain_columns + ["duplicate_group_id", "ra", "dec"]
-    return [{col: row[col] for col in columns} for row in rows]
+    columns = plain_columns + ["duplicate_group_id", "rig_id", "ra", "dec"]
+    records = []
+    for row in rows:
+        record = {col: row[col] for col in columns}
+        rig = {"name": row["rig_name"], "focal_nominal": row["rig_focal_nominal"]} if row["rig_id"] else None
+        # The label to show when focal lengths are simplified to the Rig's nominal value.
+        record["optical_train_nominal"] = optical_train.nominal_label(
+            row["optical_train"], row["telescope"], row["instrument"], row["focal_length"], rig)
+        records.append(record)
+    return records
 
 
 def get_unique_target_count(conn, exclude_ids=None):

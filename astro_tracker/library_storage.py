@@ -97,6 +97,7 @@ def _rig_from_row(row):
         "camera": row["camera"],
         "focal_min": row["focal_min"],
         "focal_max": row["focal_max"],
+        "focal_nominal": row["focal_nominal"],
     }
 
 
@@ -109,16 +110,20 @@ def get_rig(conn, rig_id):
     return _rig_from_row(row) if row else None
 
 
-def upsert_rig(conn, rig_id, name, patterns, date_ranges, camera=None, focal_min=None, focal_max=None):
+def upsert_rig(conn, rig_id, name, patterns, date_ranges, camera=None, focal_min=None, focal_max=None,
+               focal_nominal=None):
     now = _now()
     conn.execute(
-        """INSERT INTO rigs (id, name, patterns, date_ranges, camera, focal_min, focal_max, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """INSERT INTO rigs (id, name, patterns, date_ranges, camera, focal_min, focal_max, focal_nominal,
+                             created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET name = excluded.name, patterns = excluded.patterns,
                                          date_ranges = excluded.date_ranges, camera = excluded.camera,
                                          focal_min = excluded.focal_min, focal_max = excluded.focal_max,
+                                         focal_nominal = excluded.focal_nominal,
                                          updated_at = excluded.updated_at""",
-        (rig_id, name, json.dumps(patterns), json.dumps(date_ranges), camera or None, focal_min, focal_max, now, now),
+        (rig_id, name, json.dumps(patterns), json.dumps(date_ranges), camera or None, focal_min, focal_max, focal_nominal,
+         now, now),
     )
     conn.commit()
     return get_rig(conn, rig_id)
@@ -133,7 +138,8 @@ def delete_rig(conn, rig_id):
 def get_optical_train_summary(conn):
     """Each distinct Optical Train with its file count, date span and how its files are assigned to Rigs."""
     rows = conn.execute(
-        """SELECT optical_train, MAX(instrument) AS instrument, COUNT(*) AS file_count,
+        """SELECT optical_train, MAX(instrument) AS instrument, MAX(focal_length) AS focal_length,
+                  COUNT(*) AS file_count,
                   MIN(date) AS first_date, MAX(date) AS last_date,
                   GROUP_CONCAT(DISTINCT rig_id) AS rig_ids,
                   SUM(CASE WHEN rig_status = 'ambiguous' THEN 1 ELSE 0 END) AS ambiguous_count,
@@ -144,6 +150,7 @@ def get_optical_train_summary(conn):
         {
             "optical_train": row["optical_train"],
             "instrument": row["instrument"],
+            "focal_length": row["focal_length"],
             "file_count": row["file_count"],
             "first_date": row["first_date"],
             "last_date": row["last_date"],
@@ -186,7 +193,7 @@ def get_filter_summary(conn):
 # ---- Applying Rig and Filter to files ---------------------------------------
 
 def get_files_for_vocabulary(conn):
-    rows = conn.execute("SELECT id, optical_train, instrument, date, filter, rig_id, rig_status, filter_canonical FROM files")
+    rows = conn.execute("SELECT id, optical_train, instrument, focal_length, date, filter, rig_id, rig_status, filter_canonical FROM files")
     return [dict(row) for row in rows]
 
 

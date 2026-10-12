@@ -70,6 +70,31 @@ def ping(host):
     return result.returncode == 0
 
 
+class SourceError(ValueError):
+    """A Source that cannot be saved as given. The message is for the user."""
+
+
+def source_fields(name, source_dir, mirror_dir, profile="all", host=None, interval_minutes=60,
+                  stability_seconds=600, enabled=True):
+    """Check a Source's settings and return them in the form the catalog stores. Raises SourceError."""
+    if profile not in PROFILES:
+        raise SourceError(f"Unknown profile '{profile}'; expected one of {sorted(PROFILES)}")
+    name, source_dir, mirror_dir = (name or "").strip(), (source_dir or "").strip(), (mirror_dir or "").strip()
+    if not name or not source_dir or not mirror_dir:
+        raise SourceError("name, source_dir and mirror_dir are required")
+    if interval_minutes < 0 or stability_seconds < 0:
+        raise SourceError("interval_minutes and stability_seconds cannot be negative")
+    mirror_dir = mirror_dir.rstrip("/") or "/"
+    if os.path.normpath(source_dir) == os.path.normpath(mirror_dir):
+        raise SourceError("The Mirror cannot be the device folder itself")
+    return {
+        "name": name, "transport": "mounted_share", "profile": profile,
+        "source_dir": source_dir, "mirror_dir": mirror_dir,
+        "host": (host or "").strip() or None, "interval_minutes": interval_minutes,
+        "stability_seconds": stability_seconds, "enabled": int(bool(enabled)),
+    }
+
+
 def is_reachable(source_dir, host=None, ping_fn=ping):
     """A device is reachable when it answers a ping (if a host is set) and its share is mounted."""
     if host and not ping_fn(host):

@@ -7,6 +7,7 @@ import os
 
 from astropy.io import fits
 
+from astro_tracker import optical_train
 from astro_tracker.location import parse_location
 
 try:
@@ -105,22 +106,8 @@ def _is_processed(file_name, normalized_frame_type):
 
 
 def derive_optical_train(telescope, instrument, focal_length):
-    """Derive an Optical Train label from whatever subset of TELESCOP/INSTRUME/FOCALLEN headers are present.
-
-    Missing values are dropped from the joined label rather than forcing
-    the whole thing to "Unknown" -- a single missing field shouldn't dump
-    an otherwise-identifiable setup into an "Unknown" bucket. Only falls
-    back to "Unknown" when all three are absent. Friendly aliasing on top
-    of this raw derived label is deferred -- see CONTEXT.md.
-    """
-    parts = []
-    if telescope not in (None, ""):
-        parts.append(str(telescope).strip())
-    if instrument not in (None, ""):
-        parts.append(str(instrument).strip())
-    if focal_length not in (None, ""):
-        parts.append(f"{focal_length}mm")
-    return " | ".join(parts) if parts else "Unknown"
+    """The Optical Train label for whatever subset of TELESCOP/INSTRUME/FOCALLEN is present. See optical_train.py."""
+    return optical_train.label(telescope, instrument, focal_length)
 
 
 def _format_dimensions(width, height):
@@ -163,6 +150,8 @@ def get_xisf_metadata(file_path):
             "resolution": _format_dimensions(meta.get("NAXIS1"), meta.get("NAXIS2")),
             "binning": _format_dimensions(meta.get("XBINNING"), meta.get("YBINNING")),
             "optical_train": derive_optical_train(meta.get("TELESCOP"), meta.get("INSTRUME"), meta.get("FOCALLEN")),
+            "telescope": optical_train.text_value(meta.get("TELESCOP")),
+            "focal_length": optical_train.focal_length_value(meta.get("FOCALLEN")),
             "ra": meta.get("RA", meta.get("OBJCTRA", None)),
             "dec": meta.get("DEC", meta.get("OBJCTDEC", None)),
         }
@@ -218,6 +207,8 @@ def get_fits_metadata(file_path):
                 "optical_train": derive_optical_train(
                     interp.get("telescope"), interp.get("instrument"), raw_dict.get("FOCALLEN")
                 ),
+                "telescope": optical_train.text_value(interp.get("telescope")),
+                "focal_length": optical_train.focal_length_value(raw_dict.get("FOCALLEN")),
                 "ra": interp.get("ra", None),
                 "dec": interp.get("dec", None),
                 "detected_publishers": ", ".join(interp.get("detected_publishers", []))

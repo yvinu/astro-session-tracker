@@ -542,6 +542,13 @@
                         </select>
                     </div>
                     <div class="filter-item">
+                        <label title="Nominal shows each Rig's own focal length, so one set-up is one entry. Measured shows the value from each file's header.">Focal length</label>
+                        <select id="focalLengthMode">
+                            <option value="nominal">Nominal (by Rig)</option>
+                            <option value="measured">Measured (from header)</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
                         <label>Min Subframes per Target</label>
                         <input type="number" id="filterMinCount" placeholder="e.g. 100" min="0">
                     </div>
@@ -1227,6 +1234,26 @@
         }
 
         // Populate Filter Dropdowns
+        // Which Optical Train label the page shows: the Rig's nominal focal length, or the header's measured one.
+        const FOCAL_MODE_KEY = 'astro.focalLengthMode';
+
+        function focalMode() {
+            try { return localStorage.getItem(FOCAL_MODE_KEY) === 'measured' ? 'measured' : 'nominal'; }
+            catch (e) { return 'nominal'; }
+        }
+
+        function trainOf(row) {
+            return focalMode() === 'measured' ? row.optical_train : (row.optical_train_nominal || row.optical_train);
+        }
+
+        function setFocalMode(mode) {
+            try { localStorage.setItem(FOCAL_MODE_KEY, mode); } catch (e) { /* the choice just will not be remembered */ }
+            // The entries change meaning with the mode, so a selected one cannot carry over.
+            document.getElementById('filterOpticalTrain').value = '';
+            populateFilters();
+            applyFilters();
+        }
+
         function populateFilters(useFilteredData = false) {
             const dataSource = useFilteredData ? filteredData : allData;
 
@@ -1238,7 +1265,7 @@
             const instruments = [...new Set(dataSource.map(d => d.instrument))].filter(Boolean).sort();
             const resolutions = [...new Set(dataSource.map(d => d.resolution))].filter(Boolean).sort();
             const binnings = [...new Set(dataSource.map(d => d.binning))].filter(Boolean).sort();
-            const opticalTrains = [...new Set(dataSource.map(d => d.optical_train))].filter(Boolean).sort();
+            const opticalTrains = [...new Set(dataSource.map(trainOf))].filter(Boolean).sort();
 
             populateSelect('filterCategory', categories);
             populateSelect('filterFrameType', frameTypes);
@@ -1684,7 +1711,7 @@
                 if (instrument && row.instrument !== instrument) return false;
                 if (resolution && row.resolution !== resolution) return false;
                 if (binning && row.binning !== binning) return false;
-                if (opticalTrain && row.optical_train !== opticalTrain) return false;
+                if (opticalTrain && trainOf(row) !== opticalTrain) return false;
                 if (search && !row.file_name.toLowerCase().includes(search)) return false;
 
                 // Apply minimum subframe count filter
@@ -1744,6 +1771,8 @@
 
         // Setup Event Listeners
         function setupEventListeners() {
+            document.getElementById('focalLengthMode').value = focalMode();
+            document.getElementById('focalLengthMode').addEventListener('change', (e) => setFocalMode(e.target.value));
             document.getElementById('filterCategory').addEventListener('change', applyFilters);
             document.getElementById('filterFrameType').addEventListener('change', applyFilters);
             document.getElementById('filterTarget').addEventListener('change', applyFilters);

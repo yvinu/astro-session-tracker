@@ -174,7 +174,10 @@
                     <div><label>Camera (vendor words and spacing are ignored)</label><input id="rigCamera" placeholder="ASI294MC Pro"></div>
                     <div><label>Focal length from (mm)</label><input id="rigFocalMin" type="number" step="any" placeholder="365"></div>
                     <div><label>Focal length to (mm)</label><input id="rigFocalMax" type="number" step="any" placeholder="378"></div>
+                    <div><label>Nominal focal length (mm), shown on the dashboard</label><input id="rigFocalNominal" type="number" step="any" placeholder="370"></div>
                 </div>
+                <p class="hint">The from and to values are the measured range that decides which files belong to the Rig.
+                    The nominal value is only what is shown: set it to the maker's figure.</p>
                 <label>Extra Optical Train patterns, one per line (optional; for anything camera and focal length cannot express)</label>
                 <textarea id="rigPatterns" rows="2" placeholder="*seestar s50*"></textarea>
                 <label>Dates in use, one range per line as <code>start..end</code> (either side may be blank); empty = always</label>
@@ -411,8 +414,8 @@
             const [rigs, filters, targets] = await Promise.all([
                 api("GET", "/api/rigs"), api("GET", "/api/filters"), api("GET", "/api/targets")]);
 
-            const focalText = (r) => r.focal_min == null && r.focal_max == null ? "any focal length"
-                : `${r.focal_min ?? ""} to ${r.focal_max ?? ""} mm`;
+            const focalText = (r) => (r.focal_min == null && r.focal_max == null ? "any focal length"
+                : `${r.focal_min ?? ""} to ${r.focal_max ?? ""} mm`) + (r.focal_nominal == null ? "" : `, shown as ${r.focal_nominal} mm`);
             $("rigsTable").innerHTML = table(["Id", "Name", "Matches", "Dates", ""],
                 rigs.rigs.map((r) => [
                     `<code>${esc(r.id)}</code>`, esc(r.name),
@@ -426,7 +429,7 @@
             $("suggestionsTable").innerHTML = table(
                 ["Suggested id", "Camera", "Focal length", { label: "Files", num: true }, "Dates", "Optical Trains covered", ""],
                 rigs.suggestions.map((g, i) => [
-                    `<code>${esc(g.id)}</code>`, `<code>${esc(g.camera)}</code>`, `${g.focal_min} to ${g.focal_max} mm`, g.file_count,
+                    `<code>${esc(g.id)}</code>`, `<code>${esc(g.camera)}</code>`, `${g.focal_min} to ${g.focal_max} mm, nominal ${g.focal_nominal}`, g.file_count,
                     `${esc(g.first_date || "")} to ${esc(g.last_date || "")}`,
                     g.optical_trains.map(esc).join("<br>"),
                     `<button class="secondary" data-suggestion="${i}">Use</button>`,
@@ -472,6 +475,7 @@
                 await api("PUT", `/api/rigs/${encodeURIComponent($("rigId").value.trim())}`, {
                     name: $("rigName").value, patterns: $("rigPatterns").value.split("\n"), date_ranges: parseRanges($("rigRanges").value),
                     camera: $("rigCamera").value.trim() || null, focal_min: number("rigFocalMin"), focal_max: number("rigFocalMax"),
+                    focal_nominal: number("rigFocalNominal"),
                 });
                 say("rigMessage", "Saved, and files reassigned.", "ok");
                 await loadVocabulary();
@@ -486,6 +490,7 @@
                     const rig = window.rigsById[b.dataset.rig];
                     $("rigId").value = rig.id; $("rigName").value = rig.name; $("rigPatterns").value = rig.patterns.join("\n");
                     $("rigCamera").value = rig.camera || ""; $("rigFocalMin").value = rig.focal_min ?? ""; $("rigFocalMax").value = rig.focal_max ?? "";
+                    $("rigFocalNominal").value = rig.focal_nominal ?? "";
                     $("rigRanges").value = rig.date_ranges.map(([a, c]) => `${a || ""}..${c || ""}`).join("\n");
                 } else if (b.dataset.rigDelete) {
                     if (!confirm(`Remove the Rig "${b.dataset.rigDelete}"? Its files become unassigned.`)) return;
@@ -494,7 +499,7 @@
                 } else if (b.dataset.suggestion !== undefined) {
                     const g = window.rigSuggestions[Number(b.dataset.suggestion)];
                     $("rigId").value = g.id; $("rigName").value = g.name; $("rigCamera").value = g.camera;
-                    $("rigFocalMin").value = g.focal_min; $("rigFocalMax").value = g.focal_max;
+                    $("rigFocalMin").value = g.focal_min; $("rigFocalMax").value = g.focal_max; $("rigFocalNominal").value = g.focal_nominal;
                     $("rigPatterns").value = ""; $("rigRanges").value = "";
                     $("rigId").focus();
                 } else if (b.dataset.train) {

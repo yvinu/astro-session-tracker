@@ -61,7 +61,6 @@ def _in_ranges(date, ranges):
 # programs disagree on them: "ZWO ASI294MC Pro" and "ZWO CCD ASI294MC Pro"
 # are one camera.
 _CAMERA_NOISE = {"zwo", "ccd", "cmos", "camera", "qhyccd", "qhy"}
-_FOCAL_LENGTH = re.compile(r"(\d+(?:\.\d+)?)\s*mm\s*$", re.IGNORECASE)
 
 
 def normalize_camera(instrument):
@@ -70,12 +69,6 @@ def normalize_camera(instrument):
     kept = [t for t in tokens if t not in _CAMERA_NOISE]
     key = "".join(kept)
     return "" if key in ("", "unknown") else key
-
-
-def focal_length_of(optical_train):
-    """The focal length in mm at the end of an Optical Train string, or None."""
-    match = _FOCAL_LENGTH.search(str(optical_train or ""))
-    return float(match.group(1)) if match else None
 
 
 def _matches_camera_and_focal(rig, camera, focal):
@@ -87,8 +80,8 @@ def _matches_camera_and_focal(rig, camera, focal):
     return focal is not None and (low is None or focal >= low) and (high is None or focal <= high)
 
 
-def assign_rig(optical_train, date, rigs, instrument=None):
-    """Pick the Rig a file belongs to from its Optical Train, camera and capture date.
+def assign_rig(optical_train, date, rigs, instrument=None, focal_length=None):
+    """Pick the Rig a file belongs to from its camera, measured focal length, Optical Train label and capture date.
 
     `rigs` is an iterable of dicts. A Rig claims a file in either of two ways:
 
@@ -111,7 +104,7 @@ def assign_rig(optical_train, date, rigs, instrument=None):
     """
     train = (optical_train or "").lower()
     camera = normalize_camera(instrument)
-    focal = focal_length_of(optical_train)
+    focal = focal_length
     matches = [
         rig["id"] for rig in rigs
         if (any(fnmatchcase(train, p.lower()) for p in rig.get("patterns") or [])
@@ -126,8 +119,8 @@ def assign_rig(optical_train, date, rigs, instrument=None):
 def suggest_rigs(trains, tolerance=0.03):
     """Group the library's unassigned Optical Trains into proposed Rigs.
 
-    `trains` are dicts with optical_train, instrument, file_count,
-    unassigned_count, first_date and last_date. Trains are grouped by
+    `trains` are dicts with optical_train, instrument, focal_length,
+    file_count, unassigned_count, first_date and last_date. Trains are grouped by
     camera, then by focal length: sorted, with a new group wherever the
     next focal length is more than `tolerance` above the previous one.
     Plate-solved focal lengths for one set-up scatter by a percent or so;
@@ -137,12 +130,15 @@ def suggest_rigs(trains, tolerance=0.03):
     those need a hand-written pattern.
 
     Returns proposals, largest first, each with a suggested id and name,
-    the camera key, a focal range with a small margin, and the trains it covers.
+    the camera key, a focal range with a small margin, a nominal focal
+    length (the middle measured value by file count, to a whole
+    millimetre, for the user to correct to the maker's figure), and the
+    trains it covers.
     """
     by_camera = {}
     for train in trains:
         camera = normalize_camera(train.get("instrument"))
-        focal = focal_length_of(train.get("optical_train"))
+        focal = train.get("focal_length")
         if not camera or focal is None or not train.get("unassigned_count"):
             continue
         by_camera.setdefault(camera, []).append((focal, train))
@@ -160,21 +156,34 @@ def suggest_rigs(trains, tolerance=0.03):
             focals = [f for f, _t in cluster]
             covered = [t for _f, t in cluster]
             typical = sorted(covered, key=lambda t: -t["file_count"])[0]
-            centre = round(focal_length_of(typical["optical_train"]))
+            centre = round(_weighted_median([(f, t["unassigned_count"]) for f, t in cluster]))
             margin = tolerance / 3
             dates = [d[:10] for t in covered for d in (t.get("first_date"), t.get("last_date")) if d and d != "Unknown"]
             proposals.append({
                 "id": slug(f"{camera}-{centre}mm"),
-                "name": f"{typical.get('instrument') or camera} at {centre}mm",
+                "name": typical.get("instrument") or camera,
                 "camera": camera,
                 "focal_min": round(min(focals) * (1 - margin), 1),
                 "focal_max": round(max(focals) * (1 + margin), 1),
+                "focal_nominal": float(centre),
                 "file_count": sum(t["unassigned_count"] for t in covered),
                 "first_date": min(dates) if dates else None,
                 "last_date": max(dates) if dates else None,
                 "optical_trains": [t["optical_train"] for t in covered],
             })
     return sorted(proposals, key=lambda p: -p["file_count"])
+
+
+def _weighted_median(pairs):
+    """The value at the middle of the total weight, from (value, weight) pairs."""
+    ordered = sorted(pairs)
+    half = sum(weight for _value, weight in ordered) / 2
+    running = 0
+    for value, weight in ordered:
+        running += weight
+        if running >= half:
+            return value
+    return ordered[-1][0]
 
 
 # ---- Filter -----------------------------------------------------------------
