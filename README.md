@@ -29,8 +29,10 @@ The project has two parts:
 The tracker can also run as a service on a NAS, where it pulls from the telescopes on a schedule and tracks what goes into each processed image. The design and its reasons are in [`docs/adr/`](docs/adr/) (0004 to 0008) and the vocabulary in [`CONTEXT.md`](CONTEXT.md). Everything below is at `http://<nas>:8000/library`.
 
 - **Sources**: a Source mirrors a device share into a permanent folder on the NAS. A pull copies what the mirror is missing, under a temporary name, keeps the device's file dates, leaves files still being written for the next run, and never overwrites, deletes, or writes to the device. Every run is recorded, including "device was off".
-- **Content hashes**: every file gets a SHA-256, computed in a background pass and as files arrive from a Source. The pass can be stopped at any time and carries on from where it stopped.
-- **Rigs, Filters, Targets**: register each optical configuration as a Rig, matched by camera and a focal-length range (so a plate-solved focal length that shifts each night still matches), by patterns against the Optical Train, or both, with optional date ranges. The page suggests Rigs by grouping unassigned Optical Trains with the same camera and focal lengths within 3%; map each device's filter wording to one canonical Filter; give each target group one canonical Target name.
+- **Ingest**: however files arrive (a scan from the page, a Source pull, the command line) the same sequence runs: scan new and changed files, regroup the whole library, then hash. A catalogued file is therefore always grouped and named, and hashed soon after.
+- **Content hashes**: every file under a library root or a Source's Mirror gets a SHA-256. Hashing runs by itself in idle time: it pauses while a scan is running or waiting, carries on afterwards, and resumes after a restart.
+- **Activity**: every page shows what is running and what is waiting, with a cancel button on each. Scans and regrouping run one at a time in a queue; a Source pull copies at once and queues the cataloguing of what arrived.
+- **Rigs, Filters, Targets**: register each optical configuration as a Rig, matched by camera and a measured focal-length range (so a plate-solved focal length that shifts each night still matches), by patterns against the Optical Train, or both, with optional date ranges. The page suggests Rigs by grouping unassigned Optical Trains with the same camera and focal lengths within 3%. Each Rig also has a nominal focal length, which is what the dashboard shows by default, so one set-up is one entry however its headers spelled it; a switch on the dashboard shows the measured values instead. Map each device's filter wording to one canonical Filter; give each target group one canonical Target name.
 - **Projects and Checkouts**: a Project is processing work on a Target. A Checkout fixes the subs handed out for it, each with its Content hash, grouped by Rig and Filter.
 - **Check-in**: outputs and logs come back as a run. Stacks and finals are stored as `<target>_<rig>_<filter>_<stage>_<frames>x<exposure>s_v<NN>.<ext>`; the name the tool gave is kept in the catalog. Each output is linked to the Checkout it came from, so the subs behind it are known without parsing any log.
 
@@ -49,6 +51,7 @@ docker compose -f deploy/docker-compose.yml up -d --build
 | `ASTRO_PROJECTS_ROOT` | Folder that holds `<target>/<project>/` for checked-in work. |
 | `ASTRO_BACKUP_DIR`, `ASTRO_BACKUP_KEEP` | Where the nightly catalog snapshot goes and how many to keep. |
 | `ASTRO_SCHEDULER` | `1` to run scheduled pulls and snapshots. Off by default. |
+| `ASTRO_HASH_RESUME_DELAY` | Seconds after start before hashing resumes by itself (default 30). |
 | `ASTRO_CLI_TOKEN` | Shared secret for the Mac CLI. CLI routes are disabled when unset. |
 
 To bring an existing catalog over, copy it, then rewrite its paths for the container's mount point. Session ratings and notes are kept:
@@ -57,7 +60,7 @@ To bring an existing catalog over, copy it, then rewrite its paths for the conta
 python -m astro_tracker.migrate_catalog --db catalog.db --map /Volumes/Multimedia=/library
 ```
 
-To update a running service, replace the source folder (keeping your edited `docker-compose.yml`) and run the same `docker compose ... up -d --build` command. The catalog lives in the `astro-data` volume and is kept; schema changes are applied on start. A hashing pass in progress is stopped, and the hashes it finished are kept.
+To update a running service, replace the source folder (keeping your edited `docker-compose.yml`) and run the same `docker compose ... up -d --build` command. The catalog lives in the `astro-data` volume and is kept; schema changes are applied on start. Jobs that were running or waiting are dropped, which loses nothing: hashes already computed are kept and hashing resumes by itself, a pull cut off mid-run is marked interrupted and retried on schedule, and an interrupted scan is picked up by the next scan of that folder.
 
 Scans ignore symbolic links, such as those Siril's `link` leaves in `process` folders. They are counted as "Links ignored" and are neither catalogued nor reported as failures.
 
@@ -188,24 +191,21 @@ python3 -m astro_tracker.scanner [options]
 | `-d, --directory` | Directory to scan (default: `/Users/yvinu/Documents/AP`). Ignored with `--cluster-only`. |
 | `--db` | SQLite database path (default: `astro_inventory.db`). |
 | `-e, --error-log` | Error log file name (default: `fits_analysis_errors.log`). |
-| `--cluster` | Recompute RA/DEC target-group clustering, session derivation, and duplicate detection after scanning. |
-| `--cluster-only` | Skip the filesystem walk entirely and just re-run clustering/sessions/duplicates against files already in the database. Implies `--cluster`. Useful for large libraries where re-walking the filesystem just to re-cluster is wasted time. |
+| `--cluster` | Accepted for old command lines and ignored: a scan now always regroups the library and then hashes. |
+| `--cluster-only` | Skip the filesystem walk and only regroup files already in the database: target groups, sessions, duplicates, Rig, Filter and Target names. |
 | `--force` | Re-parse every file's header and re-write its row even when path+mtime match what's already stored. Ordinary scans should omit this — it re-reads every file. Use it once after upgrading to backfill fields (resolution, binning, optical train) that need a header re-read on files scanned before those fields existed; Location backfills itself automatically and doesn't need `--force`. |
 
 Examples:
 
 ```bash
-# Incremental scan, no clustering
+# Ingest a folder: scan new and changed files, regroup the library, hash what is in scope
 python3 -m astro_tracker.scanner -d /Volumes/MyDrive/AstroPhotos --db astro_inventory.db
 
-# Scan + full recompute (clustering, sessions, duplicates)
-python3 -m astro_tracker.scanner -d /Volumes/MyDrive/AstroPhotos --db astro_inventory.db --cluster
-
-# Re-cluster/re-dedup without touching the filesystem
+# Regroup without touching the filesystem
 python3 -m astro_tracker.scanner --db astro_inventory.db --cluster-only
 
 # One-time backfill of Resolution/Binning/Optical Train on an existing library
-python3 -m astro_tracker.scanner -d /Volumes/MyDrive/AstroPhotos --db astro_inventory.db --force --cluster
+python3 -m astro_tracker.scanner -d /Volumes/MyDrive/AstroPhotos --db astro_inventory.db --force
 ```
 
 If you have multiple drives/shares (e.g. external drives plus a NAS), scan each one — the same database can be scanned from as many locations as you like; files are tracked per physical copy (one row per location), and duplicate detection finds copies that ended up on more than one.
@@ -253,13 +253,14 @@ All endpoints are served locally by `astro_tracker.server`, no auth:
 | `GET /api/duplicates` | Duplicate groups with each copy's location and path. |
 | `GET /api/whats-new` | Targets/subs added since the last scan run. |
 | `GET /api/export.csv` | CSV export of the full file table. |
-| `POST /api/scan/start`, `GET /api/scan/status`, `POST /api/scan/cancel` | Background scan job control (used by the `/scan` page). |
+| `POST /api/scan/start`, `GET /api/scan/status`, `POST /api/scan/cancel` | Queue an ingest of a folder (or a regroup with `mode: cluster_only`), read its progress, cancel it. Status and cancel take an optional `job_id`. |
+| `GET /api/jobs`, `POST /api/jobs/{id}/cancel`, `POST /api/jobs/cancel-waiting` | Every background job: running, waiting and recently finished; cancel one, or everything waiting. |
 | `GET /api/scan/recent-directories` | Recently-used scan directories. |
 | `POST /api/browse-folder` | Opens the native macOS folder picker (macOS only). |
 | `POST /api/target-groups/{id}/export-siril` | Symlinks a target group's files into a Siril-shaped working folder. |
 | `GET /library` | Library Manager page. |
 | `GET/POST /api/sources`, `PUT/DELETE /api/sources/{id}`, `POST /api/sources/{id}/pull`, `GET /api/sources/{id}/runs` | Sources, pull now, run history. |
-| `POST /api/hash/start`, `GET /api/hash/status`, `POST /api/hash/cancel` | Content hash pass. |
+| `POST /api/hash/start`, `GET /api/hash/status`, `POST /api/hash/cancel` | Content hashing in idle time. It starts by itself after an ingest; this starts it by hand. |
 | `GET /api/rigs`, `PUT/DELETE /api/rigs/{id}`, `GET/PUT /api/filters`, `GET /api/targets`, `PUT /api/targets/{group_id}` | Vocabularies. |
 | `GET/POST /api/projects`, `GET /api/projects/{slug}`, `POST /api/projects/{slug}/checkouts[/preview]`, `GET /api/checkouts/{id}/manifest` | Projects and Checkouts. |
 | `GET /api/projects/{slug}/runs`, `GET /api/artifacts/{id}/inputs`, `GET /api/files/{id}/uses`, `PUT /api/runs/{id}/notes` | Runs, outputs and lineage. |
@@ -279,10 +280,11 @@ Each file is one row in `files`, keyed by its absolute path (so the same file co
 | `frame_type` | Normalized `IMAGETYP` (Light/Dark/Bias/Flat/Master variants/Unknown) |
 | `exposure`, `gain`, `temp`, `filter`, `instrument` | `EXPTIME`/`GAIN`/`SET-TEMP`/`FILTER`/`INSTRUME` headers |
 | `resolution`, `binning` | `NAXIS1`x`NAXIS2` and `XBINNING`x`YBINNING`, formatted as `WIDTHxHEIGHT` |
-| `optical_train` | Derived from whichever of `TELESCOP`/`INSTRUME`/`FOCALLEN` are present, e.g. `"Celestron NexStar 8SE \| ZWO ASI294MC Pro \| 1200mm"` |
+| `optical_train` | Label joining whichever of `TELESCOP`/`INSTRUME`/`FOCALLEN` are present, e.g. `"Celestron NexStar 8SE \| ZWO ASI294MC Pro \| 1200mm"` |
+| `telescope`, `focal_length` | `TELESCOP` and `FOCALLEN` stored as values. Rig matching uses the stored camera and focal length, never the label. |
 | `ra`, `dec` | `RA`/`DEC` (or `OBJCTRA`/`OBJCTDEC`) headers, used for target-group clustering |
 
-Derived groupings (recomputed by `--cluster`/`--cluster-only`, not stored per-scan):
+Derived groupings (recomputed after every scan and by `--cluster-only`, not stored per-scan):
 
 - **Target groups**: RA/DEC clusters (~1° tolerance, sized to a small-FOV imager), independent of the `OBJECT` label.
 - **Sessions**: target group + observation night.
@@ -295,7 +297,7 @@ pip install -r requirements.txt  # includes pytest
 pytest
 ```
 
-Tests cover the scanner's incremental/crash-resilience behavior, metadata extraction and normalization, RA/DEC clustering, duplicate detection, session derivation, the integration calculator, and the scan job state machine. The storage/API layer is largely untested by design (thin repository/route code), except for a couple of targeted regression tests protecting specific bug fixes.
+Tests cover the scanner's incremental/crash-resilience behavior, metadata extraction and normalization, RA/DEC clustering, duplicate detection, session derivation, the integration calculator, the ingest sequence, the job runner's queue, and the scan and activity routes over HTTP, all against real temporary catalogs. The rest of the storage/API layer is largely untested by design (thin repository/route code), except for a couple of targeted regression tests protecting specific bug fixes.
 
 ## Legacy one-shot scanner
 

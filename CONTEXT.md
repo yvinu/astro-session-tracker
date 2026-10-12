@@ -44,7 +44,7 @@ _Avoid_: Landing folder (a Mirror is not emptied), archive
 A stacked image a smart telescope produced itself, pulled into the Mirror alongside the subs. A File category of its own, apart from Subframe and from Processed files the user made.
 
 **Rig**:
-A named optical configuration (e.g. `s50`, `80ed-533mc-r08`), registered by the user with a camera and focal-length range, Optical Train patterns, or both, and optionally the dates it was in use. The focal-length range exists because a plate-solved focal length differs slightly from night to night. Each File is assigned to at most one Rig; a File matching none is unassigned and one matching several is ambiguous, never guessed. Adding a reducer or changing the camera makes a new Rig, because flats and image scale change. The Rig, not the Optical Train, is what names and grouping use.
+A named optical configuration (e.g. `s50`, `80ed-533mc-r08`), registered by the user with a camera and a measured focal-length range, Optical Train patterns, or both, and optionally the dates it was in use. The range exists because a plate-solved focal length differs slightly from night to night. A Rig also carries a nominal focal length (the maker's figure, e.g. 370), which is what is shown for its Files and plays no part in matching. Each File is assigned to at most one Rig; a File matching none is unassigned and one matching several is ambiguous, never guessed. Adding a reducer or changing the camera makes a new Rig, because flats and image scale change. The Rig, not the Optical Train, is what names and grouping use.
 _Avoid_: Setup, configuration, Optical Train (that is the raw value a Rig is matched against)
 
 **Target**:
@@ -81,6 +81,9 @@ What an output image is, from a fixed list: `stack`, `stack-cc`, `starless`, `st
 The stored name of a stack or final: `<target>_<rig>_<filter>_<stage>_<frames>x<exposure>s_v<NN>.<ext>`. Fields are separated by underscores and never contain one. The name a tool gave the file is kept in the catalog. Raw captures are never renamed.
 
 **Optical Train**:
-A File's equipment combination, auto-derived from `TELESCOP` + `INSTRUME` + `FOCALLEN` (whatever subset is present; "Unknown" only when all three are missing). Friendly aliasing on top of the raw derived key is deferred to a future release.
+A File's equipment as its headers gave it: telescope name (`TELESCOP`), camera (`INSTRUME`) and measured focal length (`FOCALLEN`), stored as values. The Optical Train label joins whichever are present ("Unknown" only when all three are missing) and is for display and for Rig patterns; nothing reads values back out of it. The nominal label is the reading form: a File with a Rig shows the Rig's name and nominal focal length, a File without one shows its measured focal length rounded to a whole millimetre.
 _Avoid_: Rig, setup (informal synonyms; "Optical Train" is the stored/filterable term)
 
+**Ingest**:
+Bringing the catalog up to date with the files in a folder, as one sequence: scan new and changed files, derive (regroup the whole library into target groups, sessions and Duplicate Groups, then assign Rig, Filter and Target), then compute Content Hashes. Every way files arrive -- a scan from the page, a Source pull, the command line -- is an ingest, so a catalogued File is always grouped and named. Scan and derive run one at a time in a queue; hashing fills idle time, and covers only Files under a library root or a Source's Mirror.
+_Avoid_: Scan (that is only the first step), import, clustering (that is one part of derive)
