@@ -10,7 +10,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt xisf
 
 COPY astro_tracker ./astro_tracker
-COPY *.html *.json ./
+COPY *.html *.json fits_header_analyzer.py ./
 
 ENV ASTRO_TRACKER_DB=/data/catalog.db
 EXPOSE 8000

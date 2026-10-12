@@ -12,7 +12,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from astro_tracker import config, hashing, jobs, library_storage, storage, vocabulary, vocabulary_job
+from astro_tracker import config, ingest, jobs, library_storage, storage, vocabulary, vocabulary_job
 
 router = APIRouter()
 
@@ -42,17 +42,8 @@ def _conn():
 
 @router.post("/api/hash/start")
 def start_hashing():
-    """Start a background pass hashing files under the configured library roots (all files if none are set)."""
-    db_path = _db_path()
-    prefixes = [path for _name, path in config.library_roots()] or None
-
-    def work(job):
-        return hashing.hash_pending(db_path, prefixes, should_stop=job.should_stop, progress=job.progress.update)
-
-    try:
-        return jobs.runner.start("hash", work)
-    except jobs.JobAlreadyRunningError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+    """Hash files that lack a Content hash, in idle time: under the library roots and Mirrors, or all files if none are set."""
+    return ingest.request_hashing(_db_path(), everything_if_unscoped=True)
 
 
 @router.get("/api/hash/status")
@@ -62,12 +53,12 @@ def hashing_status():
         counts = library_storage.get_hash_counts(conn)
     finally:
         conn.close()
-    return {"counts": counts, "job": jobs.runner.status("hash")}
+    return {"counts": counts, "job": jobs.runner.status(ingest.HASH_KEY)}
 
 
 @router.post("/api/hash/cancel")
 def cancel_hashing():
-    if not jobs.runner.cancel("hash"):
+    if not jobs.runner.cancel(ingest.HASH_KEY):
         raise HTTPException(status_code=409, detail="No hashing pass is running")
     return {"cancelled": True}
 
@@ -280,12 +271,13 @@ def pull_source_now(source_id: int):
     from astro_tracker import source_runs
     conn = _conn()
     try:
-        if library_storage.get_source(conn, source_id) is None:
+        source = library_storage.get_source(conn, source_id)
+        if source is None:
             raise HTTPException(status_code=404, detail=f"No Source {source_id}")
     finally:
         conn.close()
     try:
-        return source_runs.start_pull_job(_db_path(), source_id)
+        return source_runs.start_pull_job(_db_path(), source_id, label=source["name"])
     except jobs.JobAlreadyRunningError:
         raise HTTPException(status_code=409, detail="This Source is already being pulled")
 

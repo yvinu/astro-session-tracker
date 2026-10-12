@@ -47,3 +47,8 @@ def cli_token():
 
 def scheduler_enabled():
     return os.environ.get("ASTRO_SCHEDULER", "").lower() in ("1", "true", "yes")
+
+
+def hash_resume_delay():
+    """Seconds after start before hashing resumes on its own."""
+    return float(os.environ.get("ASTRO_HASH_RESUME_DELAY", "30"))

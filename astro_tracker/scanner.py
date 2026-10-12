@@ -146,57 +146,6 @@ def _print_progress(counts, file_path, status, detail=None):
         print(f"Processed: {seen} ({status}) - {os.path.basename(file_path)}", end='\r')
 
 
-def run_clustering(conn):
-    """Run RA/DEC clustering + session derivation + duplicate detection + Rig/Filter/Target naming against files already in the database.
-
-    Prints the same summary shown by the scanner's --cluster/--cluster-only flags.
-    Shared by both so the output format never drifts between the two paths.
-
-    Returns a dict summarizing the result, for callers (e.g. a background
-    scan job) that need structured data rather than just console output.
-    """
-    from astro_tracker import clustering
-    files = storage.get_all_files_for_clustering(conn)
-    group_of = clustering.cluster_files(files)
-    n_groups, n_orphaned = storage.save_clustering(conn, group_of)
-    ungrouped = storage.get_ungrouped_file_count(conn)
-    print(f"\nRA/DEC clustering: {n_groups} target group(s) found, {ungrouped} file(s) ungrouped "
-          f"(missing/malformed coordinates).")
-    if n_orphaned > 0:
-        print(f"   Note: {n_orphaned} previous target group(s) no longer match any current "
-              f"cluster and were removed; any sessions/annotations tied to them are now orphaned.")
-
-    from astro_tracker import sessions as sessions_module
-    session_files = storage.get_all_files_for_sessions(conn)
-    session_groups = sessions_module.derive_sessions(session_files)
-    n_sessions, n_stale_sessions = storage.save_sessions(conn, session_groups)
-    print(f"\nSessions: {n_sessions} session(s) derived.")
-    if n_stale_sessions > 0:
-        print(f"   Note: {n_stale_sessions} previous session(s) no longer match any current "
-              f"grouping and were removed.")
-
-    from astro_tracker import duplicates as duplicates_module
-    duplicate_files = storage.get_all_files_for_duplicates(conn)
-    duplicate_group_of = duplicates_module.find_duplicate_groups(duplicate_files)
-    n_duplicate_groups = storage.save_duplicate_groups(conn, duplicate_group_of)
-    print(f"\nDuplicates: {n_duplicate_groups} duplicate group(s) found.")
-
-    from astro_tracker import vocabulary_job
-    vocabulary_summary = vocabulary_job.recompute(conn)
-    print(f"\nRigs: {vocabulary_summary['rig_assigned']} file(s) assigned, "
-          f"{vocabulary_summary['rig_unassigned']} unassigned, {vocabulary_summary['rig_ambiguous']} ambiguous.")
-
-    return {
-        "vocabulary": vocabulary_summary,
-        "target_groups": n_groups,
-        "ungrouped_files": ungrouped,
-        "orphaned_groups": n_orphaned,
-        "sessions": n_sessions,
-        "stale_sessions": n_stale_sessions,
-        "duplicate_groups": n_duplicate_groups,
-    }
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Incrementally scan a directory for FITS/XISF files into a SQLite inventory.",
@@ -210,12 +159,11 @@ def main():
     parser.add_argument('-e', '--error-log', default=DEFAULT_ERROR_LOG,
                          help=f'Error log file name (default: {DEFAULT_ERROR_LOG})')
     parser.add_argument('--cluster', action='store_true',
-                         help='Recompute RA/DEC target-group clustering after scanning')
+                         help='Accepted for old command lines; a scan now always regroups the library afterwards.')
     parser.add_argument('--cluster-only', action='store_true',
-                         help='Skip the directory scan entirely and just re-run RA/DEC clustering + '
-                              'session derivation against files already in the database. Implies '
-                              '--cluster and ignores -d/--directory; useful for large libraries '
-                              'where re-walking the filesystem just to re-cluster is wasted time.')
+                         help='Skip the directory scan and only regroup files already in the database: '
+                              'target groups, sessions, duplicates, Rig, Filter and Target names. '
+                              'Ignores -d/--directory.')
     parser.add_argument('--force', action='store_true',
                          help='Re-parse every file\'s header and re-write its row even when path+mtime '
                               'match what\'s already stored. Use this once after upgrading to backfill '
@@ -224,14 +172,13 @@ def main():
                               'this -- it re-reads every file, unlike the normal incremental skip.')
     args = parser.parse_args()
 
+    from astro_tracker import ingest
+
     if args.cluster_only:
         print(f"Database: {args.db}")
         print("Skipping directory scan (--cluster-only)")
         print("-" * 60)
-        conn = storage.connect(args.db)
-        storage.init_schema(conn)
-        run_clustering(conn)
-        conn.close()
+        _print_derived(ingest.derive(args.db))
         return
 
     if not os.path.isdir(args.directory):
@@ -244,9 +191,12 @@ def main():
         print("Force mode: re-parsing every file regardless of mtime")
     print("-" * 60)
 
-    counts = scan_directory(
-        args.directory, args.db, args.error_log, progress_callback=_print_progress, force=args.force
-    )
+    def show(update):
+        if update.get("step") == "scan" and update.get("current"):
+            _print_progress(update["counts"], update["current"], "scanning")
+
+    result = ingest.run(args.db, args.directory, force=args.force, progress=show, error_log=args.error_log)
+    counts = result["scan"]
 
     print()
     print("-" * 60)
@@ -260,20 +210,36 @@ def main():
     if counts["failed"] > 0:
         print(f"\n{counts['failed']} file(s) failed. Check {args.error_log} for details.")
 
-    conn = storage.connect(args.db)
-    total = storage.get_total_file_count(conn)
-    print(f"\nLibrary summary ({total} files total):")
+    summary = result["library"]
+    print(f"\nLibrary summary ({summary['total_files']} files total):")
     print("Category breakdown:")
-    for category, count in storage.get_category_breakdown(conn):
+    for category, count in summary["category_breakdown"]:
         print(f"   {category}: {count}")
     print("Frame type breakdown:")
-    for frame_type, count in storage.get_frame_type_breakdown(conn):
+    for frame_type, count in summary["frame_type_breakdown"]:
         print(f"   {frame_type}: {count}")
 
-    if args.cluster:
-        run_clustering(conn)
+    if result["derived"]:
+        _print_derived(result["derived"])
+    hashed = result["hash"]
+    if hashed and not hashed.get("skipped"):
+        print(f"\nContent hashes: {hashed['hashed']} computed, {hashed['failed']} failed.")
 
-    conn.close()
+
+def _print_derived(summary):
+    print(f"\nRA/DEC clustering: {summary['target_groups']} target group(s) found, "
+          f"{summary['ungrouped_files']} file(s) ungrouped (missing/malformed coordinates).")
+    if summary["orphaned_groups"] > 0:
+        print(f"   Note: {summary['orphaned_groups']} previous target group(s) no longer match any current "
+              f"cluster and were removed; any sessions/annotations tied to them are now orphaned.")
+    print(f"\nSessions: {summary['sessions']} session(s) derived.")
+    if summary["stale_sessions"] > 0:
+        print(f"   Note: {summary['stale_sessions']} previous session(s) no longer match any current "
+              f"grouping and were removed.")
+    print(f"\nDuplicates: {summary['duplicate_groups']} duplicate group(s) found.")
+    vocabulary = summary["vocabulary"]
+    print(f"\nRigs: {vocabulary['rig_assigned']} file(s) assigned, "
+          f"{vocabulary['rig_unassigned']} unassigned, {vocabulary['rig_ambiguous']} ambiguous.")
 
 
 if __name__ == "__main__":

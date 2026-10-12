@@ -1,6 +1,9 @@
 import os
 from datetime import datetime, timedelta, timezone
 
+import threading
+import time
+
 import pytest
 
 from astro_tracker import jobs, library_storage, source_runs, storage
@@ -25,6 +28,13 @@ def test_due_only_after_a_full_interval():
 def test_disabled_or_unscheduled_source_is_never_due():
     assert not source_runs.is_due(_source(enabled=False), None, NOW)
     assert not source_runs.is_due(_source(interval_minutes=0), None, NOW)
+
+
+def _wait_until(condition, seconds=10):
+    deadline = time.time() + seconds
+    while not condition():
+        assert time.time() < deadline, "timed out"
+        time.sleep(0.01)
 
 
 @pytest.fixture
@@ -101,24 +111,54 @@ def test_differing_device_file_is_reported_in_the_run(setup):
 def test_tick_starts_due_sources_once(setup, monkeypatch):
     db, conn, source, device, mirror = setup
     monkeypatch.setattr(source_runs.source_pull, "ping", lambda h: False)
-    started = []
+    runner = jobs.JobRunner()
 
-    class FakeRunner:
-        def is_running(self, key):
-            return False
+    assert source_runs.tick(db, runner=runner) == [source["id"]]
+    _wait_until(lambda: not runner.is_running(f"pull:{source['id']}"))
+    assert source_runs.tick(db, runner=runner) == []
+    assert library_storage.get_last_source_run(conn, source["id"])["outcome"] == "unreachable"
 
-        def start(self, key, fn, wait=False):
-            started.append(key)
-            library_storage.start_source_run(conn, source["id"])
 
-    assert source_runs.tick(db, runner=FakeRunner()) == [source["id"]]
-    assert source_runs.tick(db, runner=FakeRunner()) == []
-    assert started == [f"pull:{source['id']}"]
+def test_a_pull_job_copies_at_once_and_queues_the_ingest(setup):
+    db, conn, source, device, mirror = setup
+    runner = jobs.JobRunner()
+    holding = threading.Event()
+    release = threading.Event()
+
+    def long_scan(job):
+        holding.set()
+        release.wait(5)
+
+    runner.submit("ingest:/elsewhere", long_scan, lane=jobs.LANE_QUEUE)
+    holding.wait(5)
+
+    conn.execute("UPDATE sources SET host = NULL WHERE id = ?", (source["id"],))
+    conn.commit()
+    source_runs.start_pull_job(db, source["id"], runner, label="S50")
+    _wait_until(lambda: not runner.is_running(f"pull:{source['id']}"))
+
+    # Copied while the other scan still holds the queue; cataloguing waits its turn.
+    assert sorted(os.listdir(mirror / "M 31_sub")) == ["a.fit"]
+    assert conn.execute("SELECT COUNT(*) FROM files").fetchone()[0] == 0
+    assert [j["label"] for j in runner.list()["waiting"]] == ["Catalog new files from S50"]
+
+    release.set()
+    _wait_until(lambda: not runner.list()["running"] and not runner.list()["waiting"])
+    assert conn.execute("SELECT COUNT(*) FROM files").fetchone()[0] == 2
+    assert library_storage.get_hash_counts(conn)["hashed"] == 2
+
+
+def test_runs_left_running_by_a_stopped_service_are_marked_interrupted(setup):
+    db, conn, source, device, mirror = setup
+    library_storage.start_source_run(conn, source["id"])
+
+    library_storage.close_abandoned_source_runs(conn)
+
+    assert library_storage.get_last_source_run(conn, source["id"])["outcome"] == "interrupted"
 
 
 def test_pull_now_is_rejected_while_that_source_is_running(setup):
     db, conn, source, device, mirror = setup
-    import threading
     release = threading.Event()
     runner = jobs.JobRunner()
     runner.start(f"pull:{source['id']}", lambda job: release.wait(5))

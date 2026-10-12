@@ -325,7 +325,7 @@ def finish_source_run(conn, run_id, outcome, files_copied=0, bytes_copied=0, hel
 def close_abandoned_source_runs(conn):
     """Mark runs left 'running' by a server that stopped mid-pull, so they do not look live forever."""
     conn.execute(
-        "UPDATE source_runs SET outcome = 'error', finished_at = ?, detail = 'Server stopped during the run' WHERE outcome = 'running'",
+        "UPDATE source_runs SET outcome = 'interrupted', finished_at = ?, detail = 'The service stopped during the run' WHERE outcome = 'running'",
         (_now(),),
     )
     conn.commit()
