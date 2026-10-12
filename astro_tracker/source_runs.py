@@ -9,7 +9,7 @@ that starts a pull job for each Source whose interval has passed.
 import threading
 from datetime import datetime, timedelta, timezone
 
-from astro_tracker import backup, config, hashing, jobs, library_storage, scanner, source_pull, storage
+from astro_tracker import backup, config, ingest, jobs, library_storage, source_pull, storage
 
 OUTCOME_OK = "ok"
 OUTCOME_UNREACHABLE = "unreachable"
@@ -17,13 +17,19 @@ OUTCOME_ERROR = "error"
 OUTCOME_CANCELLED = "cancelled"
 
 
-def run_pull(db_path, source_id, should_stop=None, progress=None, ping_fn=source_pull.ping, now=None):
+def run_pull(db_path, source_id, should_stop=None, progress=None, ping_fn=None, now=None,
+             ingest_fn=None):
     """Pull one Source and record the run. Returns the run's summary dict.
 
     A device that is switched off is the normal case between sessions,
     so it ends the run as "unreachable" -- recorded, but not an error.
     Files that could not be copied make the run an error while everything
     that did copy is kept and catalogued.
+
+    What arrived is then ingested. `ingest_fn(mirror_dir)` is how: the
+    service passes one that queues the ingest on the job runner, so the
+    copy never waits for a scan in progress. Left out, the Mirror is
+    ingested here before returning.
     """
     conn = storage.connect(db_path)
     storage.init_schema(conn)
@@ -34,7 +40,7 @@ def run_pull(db_path, source_id, should_stop=None, progress=None, ping_fn=source
     run_id = library_storage.start_source_run(conn, source_id)
 
     try:
-        if not source_pull.is_reachable(source["source_dir"], source["host"], ping_fn):
+        if not source_pull.is_reachable(source["source_dir"], source["host"], ping_fn or source_pull.ping):
             library_storage.finish_source_run(conn, run_id, OUTCOME_UNREACHABLE)
             return {"run_id": run_id, "outcome": OUTCOME_UNREACHABLE, "files_copied": 0}
 
@@ -67,15 +73,17 @@ def run_pull(db_path, source_id, should_stop=None, progress=None, ping_fn=source
         "run_id": run_id, "outcome": outcome, "files_copied": len(summary["copied"]),
         "bytes_copied": summary["bytes"], "held_back": summary["recent"], "differing": len(summary["differing"]),
     }
-    if summary["copied"]:
-        result["scan"] = scanner.scan_directory(source["mirror_dir"], db_path)
-        result["derived"] = scanner.run_clustering(conn)
-        # New arrivals are hashed straight away: a sub cannot go into a
-        # Checkout until it has a Content hash.
-        result["hash"] = hashing.hash_pending(db_path, [source["mirror_dir"]], should_stop=should_stop)
-    else:
-        library_storage.tag_source_files(conn)
     conn.close()
+    if summary["copied"]:
+        if ingest_fn is not None:
+            result["ingest"] = ingest_fn(source["mirror_dir"])
+        else:
+            result["ingest"] = ingest.run(db_path, source["mirror_dir"], should_stop=should_stop)
+    else:
+        # Nothing new to scan, but a Source set up over an existing folder still claims its files.
+        conn = storage.connect(db_path)
+        library_storage.tag_source_files(conn)
+        conn.close()
     return result
 
 
@@ -97,19 +105,34 @@ def is_due(source, last_started_at, now):
     return now - last >= timedelta(minutes=source["interval_minutes"])
 
 
-def start_pull_job(db_path, source_id, runner=jobs.runner):
-    """Start a background pull for one Source. Raises jobs.JobAlreadyRunningError if it is already running."""
+def start_pull_job(db_path, source_id, runner=None, label=None):
+    """Start a background pull for one Source. Raises jobs.JobAlreadyRunningError if it is already running.
+
+    The copy starts at once whatever else is running: a device may only
+    be switched on for a short while. Ingesting what arrived then takes
+    its turn in the runner's queue.
+    """
+    runner = runner or jobs.runner
+
+    def queue_ingest(mirror_dir):
+        status = ingest.submit(db_path, mirror_dir, runner=runner, label=f"Catalog new files from {label or mirror_dir}")
+        return {"queued_job": status["id"]}
+
     def work(job):
-        return run_pull(db_path, source_id, should_stop=job.should_stop, progress=job.progress.update)
-    return runner.start(f"pull:{source_id}", work)
+        return run_pull(db_path, source_id, should_stop=job.should_stop, progress=job.progress.update,
+                        ingest_fn=queue_ingest)
+
+    return runner.submit(f"pull:{source_id}", work, lane=jobs.LANE_FREE, kind="pull",
+                         label=f"Pull from {label or f'Source {source_id}'}", meta={"source_id": source_id})
 
 
-def tick(db_path, now=None, runner=jobs.runner):
+def tick(db_path, now=None, runner=None):
     """One scheduler pass: start a pull for every due Source, and take the nightly catalog snapshot.
 
     Returns the ids of Sources a pull was started for.
     """
     now = now or datetime.now(timezone.utc)
+    runner = runner or jobs.runner
     conn = storage.connect(db_path)
     storage.init_schema(conn)
     started = []
@@ -120,7 +143,7 @@ def tick(db_path, now=None, runner=jobs.runner):
                 continue
             if is_due(source, last["started_at"] if last else None, now):
                 try:
-                    start_pull_job(db_path, source["id"], runner)
+                    start_pull_job(db_path, source["id"], runner, label=source["name"])
                     started.append(source["id"])
                 except jobs.JobAlreadyRunningError:
                     pass

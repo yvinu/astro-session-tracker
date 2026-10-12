@@ -375,6 +375,7 @@
             display: none !important;
         }
     </style>
+    <script src="/static/activity.js" defer></script>
 </head>
 
 <body>
@@ -394,24 +395,17 @@
                 <label>Mode</label>
                 <div class="mode-options">
                     <label class="mode-option">
-                        <input type="radio" name="mode" value="full">
-                        <div class="mode-option-text">
-                            <strong>Full scan</strong>
-                            <span>Walk the folder and upsert file metadata. No clustering.</span>
-                        </div>
-                    </label>
-                    <label class="mode-option">
                         <input type="radio" name="mode" value="full_cluster" checked>
                         <div class="mode-option-text">
-                            <strong>Full scan + clustering</strong>
-                            <span>Scan the folder, then re-cluster target groups and sessions.</span>
+                            <strong>Scan a folder</strong>
+                            <span>Read new and changed files, regroup the library, then hash what is new in idle time.</span>
                         </div>
                     </label>
                     <label class="mode-option">
                         <input type="radio" name="mode" value="cluster_only">
                         <div class="mode-option-text">
-                            <strong>Clustering only</strong>
-                            <span>Skip the filesystem walk; just re-cluster files already in the database.</span>
+                            <strong>Regroup only</strong>
+                            <span>Skip the folder; regroup files already in the catalog. Use after changing Rigs or Filters.</span>
                         </div>
                     </label>
                 </div>
@@ -447,7 +441,7 @@
 
         <div id="progressPanel" class="panel hidden">
             <div class="progress-header">
-                <h2><span class="spinner"></span>Scan in progress</h2>
+                <h2><span class="spinner"></span><span id="progressTitle">Scan in progress</span></h2>
                 <button type="button" class="btn-danger" id="cancelBtn">Cancel</button>
             </div>
             <p class="hint" id="progressMeta"></p>
@@ -505,6 +499,12 @@
         const cancelError = document.getElementById('cancelError');
 
         let pollTimer = null;
+        let currentJobId = null;
+        const isActive = (status) => status.state === 'running' || status.state === 'waiting';
+
+        function escapeHtml(text) {
+            return String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+        }
 
         function showPanel(panel) {
             [formPanel, progressPanel, resultsPanel].forEach(p => p.classList.add('hidden'));
@@ -594,9 +594,11 @@
                     formError.classList.remove('hidden');
                     return;
                 }
+                currentJobId = data.job_id;
                 renderProgress(data);
                 showPanel(progressPanel);
                 startPolling();
+                if (window.refreshActivity) window.refreshActivity();
             } catch (e) {
                 formError.textContent = 'Could not reach the server.';
                 formError.classList.remove('hidden');
@@ -609,7 +611,7 @@
             cancelError.classList.add('hidden');
             cancelBtn.disabled = true;
             try {
-                const res = await fetch('/api/scan/cancel', { method: 'POST' });
+                const res = await fetch('/api/scan/cancel' + (currentJobId ? `?job_id=${currentJobId}` : ''), { method: 'POST' });
                 if (!res.ok) {
                     const data = await res.json();
                     cancelError.textContent = data.detail || 'Could not cancel scan.';
@@ -626,16 +628,21 @@
         });
 
         const modeLabels = {
-            full: 'Full scan',
-            full_cluster: 'Full scan + clustering',
-            cluster_only: 'Clustering only',
+            full: 'Scan',
+            full_cluster: 'Scan',
+            cluster_only: 'Regroup only',
         };
 
         function renderProgress(status) {
             const meta = document.getElementById('progressMeta');
+            const waiting = status.state === 'waiting';
+            const behind = status.waiting_behind || [];
+            document.getElementById('progressTitle').textContent = waiting ? 'Waiting for its turn'
+                : status.step === 'derive' ? 'Regrouping the library' : 'Scan in progress';
             meta.textContent = `${modeLabels[status.mode] || status.mode}` +
                 (status.directory ? ` — ${status.directory}` : '') +
-                (status.force ? ' (force re-parse)' : '');
+                (status.force ? ' (force re-parse)' : '') +
+                (waiting && behind.length ? `. Behind: ${behind.join('; ')}` : '');
 
             const counts = status.counts || {};
             const grid = document.getElementById('progressCounts');
@@ -654,18 +661,20 @@
 
         function startPolling() {
             if (pollTimer) clearInterval(pollTimer);
-            pollTimer = setInterval(async () => {
-                const res = await fetch('/api/scan/status');
+            const poll = async () => {
+                const res = await fetch('/api/scan/status' + (currentJobId ? `?job_id=${currentJobId}` : ''));
                 const status = await res.json();
-                if (status.state === 'running') {
+                if (isActive(status)) {
                     renderProgress(status);
-                } else {
+                } else if (pollTimer) {
                     clearInterval(pollTimer);
                     pollTimer = null;
                     renderResults(status);
                     showPanel(resultsPanel);
                 }
-            }, 1500);
+            };
+            pollTimer = setInterval(poll, 1500);
+            setTimeout(poll, 300);  // a newly started scan usually leaves "waiting" at once
         }
 
         function renderResults(status) {
@@ -730,7 +739,7 @@
                 failuresDetails.classList.remove('hidden');
                 document.getElementById('failuresSummary').textContent = `${failures.length} file(s) failed`;
                 document.getElementById('failuresList').innerHTML = failures.map(f =>
-                    `<li><div class="path">${f.path}</div><div class="reason">${f.reason}</div></li>`
+                    `<li><div class="path">${escapeHtml(f.path)}</div><div class="reason">${escapeHtml(f.reason)}</div></li>`
                 ).join('');
             } else {
                 failuresDetails.classList.add('hidden');
@@ -751,7 +760,8 @@
 
             const res = await fetch('/api/scan/status');
             const status = await res.json();
-            if (status.state === 'running') {
+            if (isActive(status)) {
+                currentJobId = status.job_id;
                 renderProgress(status);
                 showPanel(progressPanel);
                 startPolling();

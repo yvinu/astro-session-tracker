@@ -12,7 +12,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from astro_tracker import config, hashing, jobs, library_storage, storage, vocabulary, vocabulary_job
+from astro_tracker import config, ingest, jobs, library_storage, rigs, storage, vocabulary, vocabulary_job
 
 router = APIRouter()
 
@@ -42,17 +42,8 @@ def _conn():
 
 @router.post("/api/hash/start")
 def start_hashing():
-    """Start a background pass hashing files under the configured library roots (all files if none are set)."""
-    db_path = _db_path()
-    prefixes = [path for _name, path in config.library_roots()] or None
-
-    def work(job):
-        return hashing.hash_pending(db_path, prefixes, should_stop=job.should_stop, progress=job.progress.update)
-
-    try:
-        return jobs.runner.start("hash", work)
-    except jobs.JobAlreadyRunningError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+    """Hash files that lack a Content hash, in idle time: under the library roots and Mirrors, or all files if none are set."""
+    return ingest.request_hashing(_db_path(), everything_if_unscoped=True)
 
 
 @router.get("/api/hash/status")
@@ -62,12 +53,12 @@ def hashing_status():
         counts = library_storage.get_hash_counts(conn)
     finally:
         conn.close()
-    return {"counts": counts, "job": jobs.runner.status("hash")}
+    return {"counts": counts, "job": jobs.runner.status(ingest.HASH_KEY)}
 
 
 @router.post("/api/hash/cancel")
 def cancel_hashing():
-    if not jobs.runner.cancel("hash"):
+    if not jobs.runner.cancel(ingest.HASH_KEY):
         raise HTTPException(status_code=409, detail="No hashing pass is running")
     return {"cancelled": True}
 
@@ -81,37 +72,26 @@ class RigBody(BaseModel):
     camera: Optional[str] = None
     focal_min: Optional[float] = None
     focal_max: Optional[float] = None
+    focal_nominal: Optional[float] = None
 
 
 @router.get("/api/rigs")
 def list_rigs():
     conn = _conn()
     try:
-        trains = library_storage.get_optical_train_summary(conn)
-        return {"rigs": library_storage.get_rigs(conn), "optical_trains": trains,
-                "suggestions": vocabulary.suggest_rigs(trains)}
+        return rigs.listing(conn)
     finally:
         conn.close()
 
 
 @router.put("/api/rigs/{rig_id}")
 def save_rig(rig_id: str, body: RigBody):
-    """Create or update a Rig, then reassign every file -- a Rig edit changes which files it claims."""
-    if vocabulary.slug(rig_id, "") != rig_id:
-        raise HTTPException(status_code=400, detail="Rig id may contain only letters, digits, dot and hyphen")
-    patterns = [p.strip() for p in body.patterns if p.strip()]
-    camera = vocabulary.normalize_camera(body.camera)
-    if not patterns and not camera:
-        raise HTTPException(status_code=400, detail="A Rig needs a camera or at least one Optical Train pattern")
-    if body.focal_min is not None and body.focal_max is not None and body.focal_min > body.focal_max:
-        raise HTTPException(status_code=400, detail="The focal length range is the wrong way round")
-    if any(len(r) != 2 for r in body.date_ranges):
-        raise HTTPException(status_code=400, detail="Each date range is [start, end]; either may be null")
     conn = _conn()
     try:
-        rig = library_storage.upsert_rig(conn, rig_id, body.name.strip() or rig_id, patterns, body.date_ranges,
-                                         camera, body.focal_min, body.focal_max)
-        return {"rig": rig, "recompute": vocabulary_job.recompute(conn)}
+        return rigs.save(conn, rig_id, body.name, body.patterns, body.date_ranges, body.camera,
+                         body.focal_min, body.focal_max, body.focal_nominal)
+    except rigs.RigError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     finally:
         conn.close()
 
@@ -120,9 +100,10 @@ def save_rig(rig_id: str, body: RigBody):
 def remove_rig(rig_id: str):
     conn = _conn()
     try:
-        if not library_storage.delete_rig(conn, rig_id):
+        recompute = rigs.remove(conn, rig_id)
+        if recompute is None:
             raise HTTPException(status_code=404, detail=f"No Rig '{rig_id}'")
-        return {"deleted": True, "recompute": vocabulary_job.recompute(conn)}
+        return {"deleted": True, "recompute": recompute}
     finally:
         conn.close()
 
@@ -208,18 +189,12 @@ class SourceBody(BaseModel):
 
 def _source_fields(body):
     from astro_tracker import source_pull
-    if body.profile not in source_pull.PROFILES:
-        raise HTTPException(status_code=400, detail=f"Unknown profile '{body.profile}'; expected one of {sorted(source_pull.PROFILES)}")
-    if not body.name.strip() or not body.source_dir.strip() or not body.mirror_dir.strip():
-        raise HTTPException(status_code=400, detail="name, source_dir and mirror_dir are required")
-    if body.interval_minutes < 0 or body.stability_seconds < 0:
-        raise HTTPException(status_code=400, detail="interval_minutes and stability_seconds cannot be negative")
-    return {
-        "name": body.name.strip(), "transport": "mounted_share", "profile": body.profile,
-        "source_dir": body.source_dir.strip(), "mirror_dir": body.mirror_dir.strip().rstrip("/"),
-        "host": (body.host or "").strip() or None, "interval_minutes": body.interval_minutes,
-        "stability_seconds": body.stability_seconds, "enabled": int(body.enabled),
-    }
+    try:
+        return source_pull.source_fields(
+            body.name, body.source_dir, body.mirror_dir, body.profile, body.host,
+            body.interval_minutes, body.stability_seconds, body.enabled)
+    except source_pull.SourceError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/api/sources")
@@ -280,12 +255,13 @@ def pull_source_now(source_id: int):
     from astro_tracker import source_runs
     conn = _conn()
     try:
-        if library_storage.get_source(conn, source_id) is None:
+        source = library_storage.get_source(conn, source_id)
+        if source is None:
             raise HTTPException(status_code=404, detail=f"No Source {source_id}")
     finally:
         conn.close()
     try:
-        return source_runs.start_pull_job(_db_path(), source_id)
+        return source_runs.start_pull_job(_db_path(), source_id, label=source["name"])
     except jobs.JobAlreadyRunningError:
         raise HTTPException(status_code=409, detail="This Source is already being pulled")
 

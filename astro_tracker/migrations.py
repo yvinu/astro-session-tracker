@@ -10,6 +10,7 @@ catalog created by an older build has those tables already and
 being present.
 """
 
+import re
 import sqlite3
 
 
@@ -197,8 +198,62 @@ def _m7_rig_camera_and_focal_range(conn):
         _add_column(conn, "rigs", ddl)
 
 
+_LABEL_FOCAL = re.compile(r"^(\d+(?:\.\d+)?)\s*mm$", re.IGNORECASE)
+
+
+def split_optical_train_label(label, instrument):
+    """Take an Optical Train label apart into (telescope, focal_length). Used once, by migration 8.
+
+    The label is 'telescope | camera | 372.53mm' with any missing part
+    left out. The focal length is the last part when it reads as
+    millimetres. Of what remains, the part equal to the File's stored
+    camera is the camera and the other is the telescope; when the camera
+    is not stored, a single remaining part cannot be told apart and is
+    left as no telescope.
+    """
+    parts = [p.strip() for p in str(label or "").split(" | ") if p.strip()]
+    focal = None
+    if parts:
+        match = _LABEL_FOCAL.match(parts[-1])
+        if match:
+            focal = float(match.group(1)) or None
+            parts.pop()
+    camera = str(instrument or "").strip()
+    if camera and camera in parts:
+        parts.remove(camera)
+    elif len(parts) == 2:
+        parts.pop()
+    else:
+        parts = []
+    return (parts[0] if parts and parts[0] != "Unknown" else None), focal
+
+
+def _m8_optical_train_values_and_nominal_focal(conn):
+    """Store telescope and focal length as values, filled from the labels already in the catalog.
+
+    Filling from labels, not by rescanning, covers Files on drives this
+    machine cannot read. A Rig with a focal range gets the middle of it
+    as its nominal focal length, for the user to correct.
+    """
+    for ddl in ("telescope TEXT", "focal_length REAL"):
+        _add_column(conn, "files", ddl)
+    _add_column(conn, "rigs", "focal_nominal REAL")
+    labels = conn.execute(
+        "SELECT DISTINCT optical_train, instrument FROM files WHERE optical_train IS NOT NULL").fetchall()
+    for optical_train, instrument in labels:
+        telescope, focal = split_optical_train_label(optical_train, instrument)
+        if telescope is None and focal is None:
+            continue
+        conn.execute(
+            "UPDATE files SET telescope = ?, focal_length = ? WHERE optical_train = ? AND instrument IS ?",
+            (telescope, focal, optical_train, instrument))
+    conn.execute(
+        """UPDATE rigs SET focal_nominal = ROUND((focal_min + focal_max) / 2)
+           WHERE focal_nominal IS NULL AND focal_min IS NOT NULL AND focal_max IS NOT NULL""")
+
+
 MIGRATIONS = [_m1_baseline, _m2_content_hash, _m3_vocabularies, _m4_sources, _m5_projects, _m6_runs_and_artifacts,
-              _m7_rig_camera_and_focal_range]
+              _m7_rig_camera_and_focal_range, _m8_optical_train_values_and_nominal_focal]
 
 
 def migrate(conn):

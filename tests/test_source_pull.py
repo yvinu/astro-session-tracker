@@ -145,3 +145,29 @@ def test_reachability_needs_ping_and_mount(tmp_path):
     assert not sp.is_reachable(str(tmp_path), host="h", ping_fn=lambda h: False)
     assert not sp.is_reachable(str(tmp_path / "absent"), host="h", ping_fn=lambda h: True)
     assert sp.is_reachable(str(tmp_path), host=None, ping_fn=lambda h: False)
+
+
+# ---- a Source's settings ------------------------------------------------------
+
+def test_source_settings_are_tidied_into_the_stored_form():
+    fields = sp.source_fields(" S50 ", " /devices/s50/MyWorks ", "/library/SeestarMyWorks/", "seestar",
+                                       host=" ", interval_minutes=30, stability_seconds=0, enabled=True)
+    assert fields == {
+        "name": "S50", "transport": "mounted_share", "profile": "seestar",
+        "source_dir": "/devices/s50/MyWorks", "mirror_dir": "/library/SeestarMyWorks", "host": None,
+        "interval_minutes": 30, "stability_seconds": 0, "enabled": 1,
+    }
+
+
+@pytest.mark.parametrize("change, message", [
+    ({"profile": "telescope"}, "Unknown profile"),
+    ({"name": "  "}, "required"),
+    ({"mirror_dir": ""}, "required"),
+    ({"interval_minutes": -1}, "cannot be negative"),
+    ({"stability_seconds": -1}, "cannot be negative"),
+    ({"mirror_dir": "/devices/s50/"}, "cannot be the device folder"),
+])
+def test_invalid_source_settings_are_refused_with_a_reason(change, message):
+    given = {"name": "S50", "source_dir": "/devices/s50", "mirror_dir": "/library/s50", **change}
+    with pytest.raises(sp.SourceError, match=message):
+        sp.source_fields(**given)
